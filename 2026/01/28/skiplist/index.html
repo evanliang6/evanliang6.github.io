@@ -6,18 +6,26 @@
   <meta name="renderer" content="webkit">
   <meta http-equiv="X-UA-Compatible" content="IE=edge" >
   <link rel="dns-prefetch" href="https://evanliang6.github.io">
-  <title>Archives: 2026 | evan&#39;s blog</title>
+  <title>evan&#39;s blog</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <meta name="description" content="blog">
-<meta property="og:type" content="website">
+  <meta name="description" content="从零实现redis(一) 跳表(skiplist)跳表是什么跳表是在传统链表的基础上进行了一些改进的数据结构。传统链表在查询数据时复杂度为O(n), 而跳表通过添加多级索引的方式可以把复杂度降到O(log n)。本质上是用空间换取时间。如图所示。redis内部使用跳表来存储KV数据中的有序集合(sorted set)，跳表的实现相对简单且高效，适合在内存中存储和操作有序数据。  为什么不是B+树，">
+<meta property="og:type" content="article">
 <meta property="og:title" content="evan&#39;s blog">
-<meta property="og:url" content="https://evanliang6.github.io/archives/2026/index.html">
+<meta property="og:url" content="https://evanliang6.github.io/2026/01/28/skiplist/index.html">
 <meta property="og:site_name" content="evan&#39;s blog">
-<meta property="og:description" content="blog">
+<meta property="og:description" content="从零实现redis(一) 跳表(skiplist)跳表是什么跳表是在传统链表的基础上进行了一些改进的数据结构。传统链表在查询数据时复杂度为O(n), 而跳表通过添加多级索引的方式可以把复杂度降到O(log n)。本质上是用空间换取时间。如图所示。redis内部使用跳表来存储KV数据中的有序集合(sorted set)，跳表的实现相对简单且高效，适合在内存中存储和操作有序数据。  为什么不是B+树，">
 <meta property="og:locale">
+<meta property="og:image" content="https://evanliang6.github.io/image.png">
+<meta property="og:image" content="https://evanliang6.github.io/image-1.png">
+<meta property="og:image" content="https://evanliang6.github.io/image-2.png">
+<meta property="og:image" content="https://evanliang6.github.io/image-3.png">
+<meta property="og:image" content="https://evanliang6.github.io/image-4.png">
+<meta property="article:published_time" content="2026-01-28T12:48:03.054Z">
+<meta property="article:modified_time" content="2026-01-28T13:13:40.914Z">
 <meta property="article:author" content="Liang Yifan">
 <meta property="article:tag" content="Liang Yifan">
 <meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://evanliang6.github.io/image.png">
   
     <link rel="alternative" href="/atom.xml" title="evan&#39;s blog" type="application/atom+xml">
   
@@ -155,118 +163,149 @@
             <canvas data-colors="#eaeaea" data-sectionHeight="100" data-contentId="js-content" id="myCanvas1" class="anm-canvas"></canvas>
           </div>
           <div id="js-content" class="content-ll">
-            
-  
-  
+            <article id="post-skiplist" class="article article-type-post " itemscope itemprop="blogPost">
+  <div class="article-inner">
     
-    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h1 id="从零实现redis-一-跳表-skiplist"><a href="#从零实现redis-一-跳表-skiplist" class="headerlink" title="从零实现redis(一) 跳表(skiplist)"></a>从零实现redis(一) 跳表(skiplist)</h1><h2 id="跳表是什么"><a href="#跳表是什么" class="headerlink" title="跳表是什么"></a>跳表是什么</h2><p>跳表是在传统链表的基础上进行了一些改进的数据结构。传统链表在查询数据时复杂度为O(n), 而跳表通过添加多级索引的方式可以把复杂度降到O(log n)。本质上是用空间换取时间。如图所示。<br>redis内部使用跳表来存储KV数据中的有序集合(sorted set)，跳表的实现相对简单且高效，适合在内存中存储和操作有序数据。</p>
+<p><img src="/image.png" alt="alt text"></p>
+<h2 id="为什么不是B-树，红黑树，hashmap"><a href="#为什么不是B-树，红黑树，hashmap" class="headerlink" title="为什么不是B+树，红黑树，hashmap"></a>为什么不是B+树，红黑树，hashmap</h2><p>B+树是mysql用的数据结构。其复杂度和跳表一样，为O(log n)。但是B+树的实现相对复杂，涉及到节点的分裂和合并等操作。而跳表的实现更为简单，适合在内存中使用。mysql需要把数据存在磁盘上，B+树可以将索引加载进内存，而redis是纯内存，因此不需要B+树。<br>红黑树应用在std::map, linux内核进程调度等场景。复杂度也和跳表类似。红黑树的实现相对复杂，涉及到旋转和重新着色等操作。而跳表的实现更为简单，适合在内存中使用。<br>hashmap理论上查找复杂度为O(1)，但是在实际应用中，hash冲突会导致性能下降。而且hashmap不支持<strong>有序遍历</strong>，而跳表可以高效地支持范围查询和有序遍历。</p>
+<h2 id="跳表的查找和修改"><a href="#跳表的查找和修改" class="headerlink" title="跳表的查找和修改"></a>跳表的查找和修改</h2><p>跳表的查找过程类似于二分查找。首先从<strong>最高层的索引开始</strong>，比较当前节点的值与目标值。如果当前节点的值小于目标值，则沿着当前层向右移动；如果当前节点的值大于目标值，则下降到下一层继续比较。重复这个过程，直到找到目标值或者到达最底层。<br><img src="/image-1.png" alt="alt text"><br>我们查找71，首先最高的索引节点值为31, 我们直接跳到31节点了，省去了一个一个往后移的过程。<br>在实现的时候，找索引的过程可以直接遍历。因为跳表的高度最高为logn。<strong>查找的复杂度等于最高复杂度</strong>，不会增加理论复杂度。虽然理论上来说二分查找会更好。因此我们选用遍历的方式。</p>
+<p>修改只需要调用查找的过程，找到节点后直接修改节点的值即可。</p>
+<h2 id="跳表的删除"><a href="#跳表的删除" class="headerlink" title="跳表的删除"></a>跳表的删除</h2><p>删除本质上就是找到了之后，把节点删除掉。删除节点后需要更新索引节点，确保索引节点的正确性。<br><img src="/image-2.png" alt="alt text"><br><img src="/image-3.png" alt="alt text"></p>
+<h2 id="跳表的插入"><a href="#跳表的插入" class="headerlink" title="跳表的插入"></a>跳表的插入</h2><p>插入节点时，首先需要找到插入位置，然后将新节点插入到链表中。插入后，需要根据一定的概率决定是否为新节点创建索引节点。通常使用<strong>抛硬币</strong>的方式来决定是否创建索引节点，这样可以保持跳表的平衡性。</p>
+<p><img src="/image-4.png" alt="alt text"><br>在插入87的时候假设高度为3，如何把71高度为2,3的索引节点连接到87上呢？我们需要在插入过程中记录每一层的前驱节点，这样在插入新节点后，可以方便地更新索引节点的指针。</p>
+<h2 id="实现和参考"><a href="#实现和参考" class="headerlink" title="实现和参考"></a>实现和参考</h2><p>跳表的实现参考了tinyredis.<br>ppt参考：<a target="_blank" rel="noopener" href="https://www.cs.cmu.edu/~ckingsf/bioinfo-lectures/skiplists.pdf">https://www.cs.cmu.edu/~ckingsf/bioinfo-lectures/skiplists.pdf</a></p>
+
+      
+
+      
+        <div class="page-reward">
+          <a href="javascript:;" class="page-reward-btn tooltip-top">
+            <div class="tooltip tooltip-east">
+            <span class="tooltip-item">
+              赏
+            </span>
+            <span class="tooltip-content">
+              <span class="tooltip-text">
+                <span class="tooltip-inner">
+                  <p class="reward-p"><i class="icon icon-quo-left"></i>谢谢你请我吃糖果<i class="icon icon-quo-right"></i></p>
+                  <div class="reward-box">
+                    
+                    
+                  </div>
+                </span>
+              </span>
+            </span>
+          </div>
+          </a>
+        </div>
+      
+    </div>
+    <div class="article-info article-info-index">
       
       
-      <section class="archives-wrap">
-        <div class="archive-year-wrap">
-          <a href="/archives/2026" class="archive-year">2026</a>
-        </div>
-        <div class="archives">
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      	<div class="article-meta">
-	      	<a href="/2026/01/28/skiplist/" class="archive-article-date">
-  	<time datetime="2026-01-28T12:48:03.054Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2026-01-28</time>
-</a>
-        </div>
-    	 
-        <div class="article-info info-on-right">
-          
-          
+      
 
+      
+
+      
+        
+<div class="share-btn share-icons tooltip-left">
+  <div class="tooltip tooltip-east">
+    <span class="tooltip-item">
+      <a href="javascript:;" class="share-sns share-outer">
+        <i class="icon icon-share"></i>
+      </a>
+    </span>
+    <span class="tooltip-content">
+      <div class="share-wrap">
+        <div class="share-icons">
+          <a class="weibo share-sns" href="javascript:;" data-type="weibo">
+            <i class="icon icon-weibo"></i>
+          </a>
+          <a class="weixin share-sns wxFab" href="javascript:;" data-type="weixin">
+            <i class="icon icon-weixin"></i>
+          </a>
+          <a class="qq share-sns" href="javascript:;" data-type="qq">
+            <i class="icon icon-qq"></i>
+          </a>
+          <a class="douban share-sns" href="javascript:;" data-type="douban">
+            <i class="icon icon-douban"></i>
+          </a>
+          <a class="qzone share-sns" href="javascript:;" data-type="qzone">
+            <i class="icon icon-qzone"></i>
+          </a>
+          <a class="facebook share-sns" href="javascript:;" data-type="facebook">
+            <i class="icon icon-facebook"></i>
+          </a>
+          <a class="twitter share-sns" href="javascript:;" data-type="twitter">
+            <i class="icon icon-twitter"></i>
+          </a>
+          <a class="google share-sns" href="javascript:;" data-type="google">
+            <i class="icon icon-google"></i>
+          </a>
         </div>
-        <div class="clearfix"></div>
-    </header>
+      </div>
+    </span>
+  </div>
+</div>
+
+<div class="page-modal wx-share js-wx-box">
+    <a class="close js-modal-close" href="javascript:;"><i class="icon icon-close"></i></a>
+    <p>扫一扫，分享到微信</p>
+    <div class="wx-qrcode">
+      <img src="//pan.baidu.com/share/qrcode?url=https://evanliang6.github.io/2026/01/28/skiplist/" alt="微信分享二维码">
+    </div>
+</div>
+
+<div class="mask js-mask"></div>
+      
+      <div class="clearfix"></div>
+    </div>
   </div>
 </article>
-  
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      	<div class="article-meta">
-	      	<a href="/2026/01/28/C++11%20%E6%9D%82%E9%A1%B9%E9%9A%8F%E7%AC%94/" class="archive-article-date">
-  	<time datetime="2026-01-28T04:10:42.064Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2026-01-28</time>
-</a>
-        </div>
-    	 
-        <div class="article-info info-on-right">
-          
-          
 
-        </div>
-        <div class="clearfix"></div>
-    </header>
-  </div>
-</article>
   
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      	<div class="article-meta">
-	      	<a href="/2026/01/16/About-me/" class="archive-article-date">
-  	<time datetime="2026-01-15T17:06:41.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2026-01-16</time>
-</a>
-        </div>
-    	 
+<nav id="article-nav">
   
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2026/01/16/About-me/">About me</a>
-    </h1>
+  
+    <a href="/2026/01/28/C++11%20%E6%9D%82%E9%A1%B9%E9%9A%8F%E7%AC%94/" id="article-nav-older" class="article-nav-link-wrap">
+      <div class="article-nav-title"></div>
+      <i class="icon-circle-right"></i>
+    </a>
+  
+</nav>
+
+
+<aside class="wrap-side-operation">
+    <div class="mod-side-operation">
+        
+        <div class="jump-container" id="js-jump-container" style="display:none;">
+            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
+                <i class="icon-font icon-back"></i>
+            </a>
+            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
+                <i class="icon-font icon-plane jump-plane"></i>
+            </div>
+        </div>
+        
+        
+    </div>
+</aside>
+
+
+
+  
+  
   
 
-        <div class="article-info info-on-right">
-          
-          
-
-        </div>
-        <div class="clearfix"></div>
-    </header>
-  </div>
-</article>
-  
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      	<div class="article-meta">
-	      	<a href="/2026/01/15/hello-world/" class="archive-article-date">
-  	<time datetime="2026-01-15T14:52:03.456Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2026-01-15</time>
-</a>
-        </div>
-    	 
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2026/01/15/hello-world/">Hello World</a>
-    </h1>
   
 
-        <div class="article-info info-on-right">
-          
-          
-
-        </div>
-        <div class="clearfix"></div>
-    </header>
-  </div>
-</article>
-  
-  
-    </div></section>
   
 
-    
+  
 
 
           </div>
@@ -289,8 +328,8 @@
 	var yiliaConfig = {
 		mathjax: false,
 		isHome: false,
-		isPost: false,
-		isArchive: true,
+		isPost: true,
+		isArchive: false,
 		isTag: false,
 		isCategory: false,
 		open_in_new: false,
