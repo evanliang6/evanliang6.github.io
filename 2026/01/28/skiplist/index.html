@@ -8,12 +8,12 @@
   <link rel="dns-prefetch" href="https://evanliang6.github.io">
   <title>从零实现redis(一) 跳表(skiplist) | evan&#39;s blog</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <meta name="description" content="跳表是什么跳表是在传统链表的基础上进行了一些改进的数据结构。传统链表在查询数据时复杂度为O(n), 而跳表通过添加多级索引的方式可以把复杂度降到O(log n)。本质上是用空间换取时间。如图所示。redis内部使用跳表来存储KV数据中的有序集合(sorted set)，跳表的实现相对简单且高效，适合在内存中存储和操作有序数据。  为什么不是B+树，红黑树，hashmapB+树是mysql用的数据结">
+  <meta name="description" content="介绍跳表的数据结构，为什么redis使用跳表而不是B+树，红黑树，hashmap等数据结构。并且介绍跳表的实现原理，包括查找，插入，删除等操作。">
 <meta property="og:type" content="article">
 <meta property="og:title" content="从零实现redis(一) 跳表(skiplist)">
 <meta property="og:url" content="https://evanliang6.github.io/2026/01/28/skiplist/index.html">
 <meta property="og:site_name" content="evan&#39;s blog">
-<meta property="og:description" content="跳表是什么跳表是在传统链表的基础上进行了一些改进的数据结构。传统链表在查询数据时复杂度为O(n), 而跳表通过添加多级索引的方式可以把复杂度降到O(log n)。本质上是用空间换取时间。如图所示。redis内部使用跳表来存储KV数据中的有序集合(sorted set)，跳表的实现相对简单且高效，适合在内存中存储和操作有序数据。  为什么不是B+树，红黑树，hashmapB+树是mysql用的数据结">
+<meta property="og:description" content="介绍跳表的数据结构，为什么redis使用跳表而不是B+树，红黑树，hashmap等数据结构。并且介绍跳表的实现原理，包括查找，插入，删除等操作。">
 <meta property="og:locale">
 <meta property="og:image" content="https://evanliang6.github.io/images/image.png">
 <meta property="og:image" content="https://evanliang6.github.io/images/image-1.png">
@@ -21,7 +21,7 @@
 <meta property="og:image" content="https://evanliang6.github.io/images/image-3.png">
 <meta property="og:image" content="https://evanliang6.github.io/images/image-4.png">
 <meta property="article:published_time" content="2026-01-28T12:48:03.054Z">
-<meta property="article:modified_time" content="2026-01-29T07:20:40.650Z">
+<meta property="article:modified_time" content="2026-01-29T08:03:31.412Z">
 <meta property="article:author" content="Liang Yifan">
 <meta property="article:tag" content="Liang Yifan">
 <meta name="twitter:card" content="summary">
