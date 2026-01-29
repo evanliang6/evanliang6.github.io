@@ -69,6 +69,8 @@
 		<nav class="header-smart-menu">
     		
     			
+    			<a q-on="click: openSlider(e, 'innerArchive')" href="javascript:void(0)">true</a>
+    			
             
     			
             
@@ -160,9 +162,24 @@
     <article id="post-社会心理学1" class="article article-type-post  article-index" itemscope itemprop="blogPost">
   <div class="article-inner">
     
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2026/01/29/%E7%A4%BE%E4%BC%9A%E5%BF%83%E7%90%86%E5%AD%A61/">社会性动物读书笔记(一) 社会认知</a>
+    </h1>
+  
+
+        
+        <a href="/2026/01/29/%E7%A4%BE%E4%BC%9A%E5%BF%83%E7%90%86%E5%AD%A61/" class="archive-article-date">
+  	<time datetime="2026-01-29T07:14:08.739Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2026-01-29</time>
+</a>
+        
+      </header>
+    
     <div class="article-entry" itemprop="articleBody">
       
-        <h1 id="社会性动物读书笔记-一-社会认知"><a href="#社会性动物读书笔记-一-社会认知" class="headerlink" title="社会性动物读书笔记(一) 社会认知"></a>社会性动物读书笔记(一) 社会认知</h1><p>在现代人的视角看来，古人的观念是迷信的。然而，各时代人们都嘲笑前人的荒谬，但本身也会陷入迷信。</p>
+        <p>在现代人的视角看来，古人的观念是迷信的。然而，各时代人们都嘲笑前人的荒谬，但本身也会陷入迷信。</p>
 <p>社会认知是社会心理学的一个主要领域。这个研究领域关注的是：人们如何相信自己所做的事情；人们如何解释、记忆、预测、作出决定、评价自己和他人；以及为什么这些过程经常会产生错误。</p>
 <p>在很多时候，我们采用理性、事实和批判性分析，<strong>不是为了形成我们的观点，而是为了确证我们已经看到、感觉到或者相信的东西</strong>。正如小说家阿娜伊斯·宁（Anais Nin）所言：“我们看到的并非事物的本来面目；而是我们所看到的事物的本来面目。”。在很大程度上，<strong>我们如何理解世界取决于我们的直觉、我们的个性、我们感知世界的方式，以及一系列基础性的社会动机</strong>。</p>
 <h2 id="进化与偏执"><a href="#进化与偏执" class="headerlink" title="进化与偏执"></a>进化与偏执</h2><p>大多数人都是认知吝啬者，由于信息有限和时间有限，倾向用经验法则和直觉，节省认知能量，但会带来偏误。</p>
@@ -276,9 +293,24 @@
     <article id="post-skiplist" class="article article-type-post  article-index" itemscope itemprop="blogPost">
   <div class="article-inner">
     
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2026/01/28/skiplist/">从零实现redis(一) 跳表(skiplist)</a>
+    </h1>
+  
+
+        
+        <a href="/2026/01/28/skiplist/" class="archive-article-date">
+  	<time datetime="2026-01-28T12:48:03.054Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2026-01-28</time>
+</a>
+        
+      </header>
+    
     <div class="article-entry" itemprop="articleBody">
       
-        <h1 id="从零实现redis-一-跳表-skiplist"><a href="#从零实现redis-一-跳表-skiplist" class="headerlink" title="从零实现redis(一) 跳表(skiplist)"></a>从零实现redis(一) 跳表(skiplist)</h1><h2 id="跳表是什么"><a href="#跳表是什么" class="headerlink" title="跳表是什么"></a>跳表是什么</h2><p>跳表是在传统链表的基础上进行了一些改进的数据结构。传统链表在查询数据时复杂度为O(n), 而跳表通过添加多级索引的方式可以把复杂度降到O(log n)。本质上是用空间换取时间。如图所示。<br>redis内部使用跳表来存储KV数据中的有序集合(sorted set)，跳表的实现相对简单且高效，适合在内存中存储和操作有序数据。</p>
+        <h2 id="跳表是什么"><a href="#跳表是什么" class="headerlink" title="跳表是什么"></a>跳表是什么</h2><p>跳表是在传统链表的基础上进行了一些改进的数据结构。传统链表在查询数据时复杂度为O(n), 而跳表通过添加多级索引的方式可以把复杂度降到O(log n)。本质上是用空间换取时间。如图所示。<br>redis内部使用跳表来存储KV数据中的有序集合(sorted set)，跳表的实现相对简单且高效，适合在内存中存储和操作有序数据。</p>
 <p><img src="/images/image.png" alt="alt text"></p>
 <h2 id="为什么不是B-树，红黑树，hashmap"><a href="#为什么不是B-树，红黑树，hashmap" class="headerlink" title="为什么不是B+树，红黑树，hashmap"></a>为什么不是B+树，红黑树，hashmap</h2><p>B+树是mysql用的数据结构。其复杂度和跳表一样，为O(log n)。但是B+树的实现相对复杂，涉及到节点的分裂和合并等操作。而跳表的实现更为简单，适合在内存中使用。mysql需要把数据存在磁盘上，B+树可以将索引加载进内存，而redis是纯内存，因此不需要B+树。<br>红黑树应用在std::map, linux内核进程调度等场景。复杂度也和跳表类似。红黑树的实现相对复杂，涉及到旋转和重新着色等操作。而跳表的实现更为简单，适合在内存中使用。<br>hashmap理论上查找复杂度为O(1)，但是在实际应用中，hash冲突会导致性能下降。而且hashmap不支持<strong>有序遍历</strong>，而跳表可以高效地支持范围查询和有序遍历。</p>
 <h2 id="跳表的查找和修改"><a href="#跳表的查找和修改" class="headerlink" title="跳表的查找和修改"></a>跳表的查找和修改</h2><p>跳表的查找过程类似于二分查找。首先从<strong>最高层的索引开始</strong>，比较当前节点的值与目标值。如果当前节点的值小于目标值，则沿着当前层向右移动；如果当前节点的值大于目标值，则下降到下一层继续比较。重复这个过程，直到找到目标值或者到达最底层。<br><img src="/images/image-1.png" alt="alt text"><br>我们查找71，首先最高的索引节点值为31, 我们直接跳到31节点了，省去了一个一个往后移的过程。<br>在实现的时候，找索引的过程可以直接遍历。因为跳表的高度最高为logn。<strong>查找的复杂度等于最高复杂度</strong>，不会增加理论复杂度。虽然理论上来说二分查找会更好。因此我们选用遍历的方式。</p>
@@ -332,9 +364,24 @@
     <article id="post-C++11 杂项随笔" class="article article-type-post  article-index" itemscope itemprop="blogPost">
   <div class="article-inner">
     
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2026/01/28/C++11%20%E6%9D%82%E9%A1%B9%E9%9A%8F%E7%AC%94/">C++11 杂项随笔</a>
+    </h1>
+  
+
+        
+        <a href="/2026/01/28/C++11%20%E6%9D%82%E9%A1%B9%E9%9A%8F%E7%AC%94/" class="archive-article-date">
+  	<time datetime="2026-01-28T04:10:42.064Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2026-01-28</time>
+</a>
+        
+      </header>
+    
     <div class="article-entry" itemprop="articleBody">
       
-        <h1 id="C-11-杂项随笔"><a href="#C-11-杂项随笔" class="headerlink" title="C++11 杂项随笔"></a>C++11 杂项随笔</h1><h2 id="nullptr"><a href="#nullptr" class="headerlink" title="nullptr"></a>nullptr</h2><p>nullptr和NULL的区别：NULL在C++中是一个宏，被定义为0. 而nullptr是C++11引入的一个关键字，表示空指针。<br>C++对于类型的转换更加严格，指针类型的转换有时不能像C隐式转换，使用nullptr可以避免这些问题。</p>
+        <h2 id="nullptr"><a href="#nullptr" class="headerlink" title="nullptr"></a>nullptr</h2><p>nullptr和NULL的区别：NULL在C++中是一个宏，被定义为0. 而nullptr是C++11引入的一个关键字，表示空指针。<br>C++对于类型的转换更加严格，指针类型的转换有时不能像C隐式转换，使用nullptr可以避免这些问题。</p>
 <h2 id="constexpr"><a href="#constexpr" class="headerlink" title="constexpr"></a>constexpr</h2><p>用来修饰常量表达式的函数或变量，表示在编译时就能计算出结果，提高程序的性能。<br>常量表达式函数：如果函数的返回值可以在编译时确定，那么这个函数就可以被声明为constexpr。如果传入的参数也是常量表达式，那么函数的返回值也是常量表达式。</p>
 <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">constexpr</span> <span class="type">int</span> <span class="title">func1</span><span class="params">(<span class="type">int</span> x)</span></span>&#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="number">10</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">constexpr</span> <span class="type">int</span> <span class="title">func2</span><span class="params">(<span class="type">int</span> x)</span></span>&#123;</span><br><span class="line">    <span class="keyword">return</span> x + <span class="number">10</span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="type">int</span> <span class="title">main</span><span class="params">()</span></span>&#123;</span><br><span class="line">    <span class="type">int</span> x = <span class="number">100</span>;</span><br><span class="line">    <span class="keyword">constexpr</span> <span class="type">int</span> a = <span class="built_in">fun1</span>(x); <span class="comment">// 合法，a的值在编译时就能确定为10</span></span><br><span class="line">    <span class="keyword">constexpr</span> <span class="type">int</span> b = <span class="built_in">func2</span>(<span class="number">5</span>); <span class="comment">// 合法，b的值在编译时就能确定为15</span></span><br><span class="line">    <span class="type">int</span> x = <span class="number">5</span>;</span><br><span class="line">    <span class="comment">// constexpr int c = func2(x); // 非法，x不是常量表达式，无法在编译时确定c的值</span></span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 <h2 id="volatile"><a href="#volatile" class="headerlink" title="volatile"></a>volatile</h2><p>volatile修饰变量，告诉编译器该变量的值可能会在程序的其他部分被改变，防止编译器对其进行优化。</p>
@@ -577,7 +624,7 @@
 		open_in_new: false,
 		toc_hide_index: true,
 		root: "/",
-		innerArchive: false,
+		innerArchive: true,
 		showTags: false
 	}
 </script>
@@ -594,6 +641,8 @@ return o(i(t),arguments.length<2?void 0:u(arguments[1]))}})},function(t,n,r){var
     
     
       
+      
+      
     
       
     
@@ -607,16 +656,73 @@ return o(i(t),arguments.length<2?void 0:u(arguments[1]))}})},function(t,n,r){var
     
     
       
-        
+      <li style="width: 50%" q-on="click: openSlider(e, 'innerArchive')"><a href="javascript:void(0)" q-class="active:innerArchive">true</a></li>
       
         
       
-      <li style="width: 100%" q-on="click: openSlider(e, 'aboutme')"><a href="javascript:void(0)" q-class="active:aboutme">关于blog</a></li>
+        
+      
+      <li style="width: 50%" q-on="click: openSlider(e, 'aboutme')"><a href="javascript:void(0)" q-class="active:aboutme">关于blog</a></li>
       
         
     </ul>
   </div>
   <div class="tools-wrap">
+    
+    	<section class="tools-section tools-section-all" q-show="innerArchive">
+        <div class="search-wrap">
+          <input class="search-ipt" q-model="search" type="text" placeholder="find something…">
+          <i class="icon-search icon" q-show="search|isEmptyStr"></i>
+          <i class="icon-close icon" q-show="search|isNotEmptyStr" q-on="click:clearChose(e)"></i>
+        </div>
+        <div class="widget tagcloud search-tag">
+          <p class="search-tag-wording">tag:</p>
+          <label class="search-switch">
+            <input type="checkbox" q-on="click:toggleTag(e)" q-attr="checked:showTags">
+          </label>
+          <ul class="article-tag-list" q-show="showTags">
+            
+            <div class="clearfix"></div>
+          </ul>
+        </div>
+        <ul class="search-ul">
+          <p q-show="jsonFail" style="padding: 20px; font-size: 12px;">
+            缺失模块。<br/>1、请确保node版本大于6.2<br/>2、在博客根目录（注意不是yilia根目录）执行以下命令：<br/> npm i hexo-generator-json-content --save<br/><br/>
+            3、在根目录_config.yml里添加配置：
+<pre style="font-size: 12px;" q-show="jsonFail">
+  jsonContent:
+    meta: false
+    pages: false
+    posts:
+      title: true
+      date: true
+      path: true
+      text: false
+      raw: false
+      content: false
+      slug: false
+      updated: false
+      comments: false
+      link: false
+      permalink: false
+      excerpt: false
+      categories: false
+      tags: true
+</pre>
+          </p>
+          <li class="search-li" q-repeat="items" q-show="isShow">
+            <a q-attr="href:path|urlformat" class="search-title"><i class="icon-quo-left icon"></i><span q-text="title"></span></a>
+            <p class="search-time">
+              <i class="icon-calendar icon"></i>
+              <span q-text="date|dateformat"></span>
+            </p>
+            <p class="search-tag">
+              <i class="icon-price-tags icon"></i>
+              <span q-repeat="tags" q-on="click:choseTag(e, name)" q-text="name|tagformat"></span>
+            </p>
+          </li>
+        </ul>
+    	</section>
     
 
     
