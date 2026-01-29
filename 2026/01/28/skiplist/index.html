@@ -21,7 +21,7 @@
 <meta property="og:image" content="https://evanliang6.github.io/images/image-3.png">
 <meta property="og:image" content="https://evanliang6.github.io/images/image-4.png">
 <meta property="article:published_time" content="2026-01-28T12:48:03.054Z">
-<meta property="article:modified_time" content="2026-01-29T08:03:31.412Z">
+<meta property="article:modified_time" content="2026-01-29T08:08:20.645Z">
 <meta property="article:author" content="Liang Yifan">
 <meta property="article:tag" content="Liang Yifan">
 <meta name="twitter:card" content="summary">
@@ -186,6 +186,8 @@
     <div class="article-entry" itemprop="articleBody">
       
         <h2 id="跳表是什么"><a href="#跳表是什么" class="headerlink" title="跳表是什么"></a>跳表是什么</h2><p>跳表是在传统链表的基础上进行了一些改进的数据结构。传统链表在查询数据时复杂度为O(n), 而跳表通过添加多级索引的方式可以把复杂度降到O(log n)。本质上是用空间换取时间。如图所示。<br>redis内部使用跳表来存储KV数据中的有序集合(sorted set)，跳表的实现相对简单且高效，适合在内存中存储和操作有序数据。</p>
+<span id="more"></span>
+
 <p><img src="/images/image.png" alt="alt text"></p>
 <h2 id="为什么不是B-树，红黑树，hashmap"><a href="#为什么不是B-树，红黑树，hashmap" class="headerlink" title="为什么不是B+树，红黑树，hashmap"></a>为什么不是B+树，红黑树，hashmap</h2><p>B+树是mysql用的数据结构。其复杂度和跳表一样，为O(log n)。但是B+树的实现相对复杂，涉及到节点的分裂和合并等操作。而跳表的实现更为简单，适合在内存中使用。mysql需要把数据存在磁盘上，B+树可以将索引加载进内存，而redis是纯内存，因此不需要B+树。<br>红黑树应用在std::map, linux内核进程调度等场景。复杂度也和跳表类似。红黑树的实现相对复杂，涉及到旋转和重新着色等操作。而跳表的实现更为简单，适合在内存中使用。<br>hashmap理论上查找复杂度为O(1)，但是在实际应用中，hash冲突会导致性能下降。而且hashmap不支持<strong>有序遍历</strong>，而跳表可以高效地支持范围查询和有序遍历。</p>
 <h2 id="跳表的查找和修改"><a href="#跳表的查找和修改" class="headerlink" title="跳表的查找和修改"></a>跳表的查找和修改</h2><p>跳表的查找过程类似于二分查找。首先从<strong>最高层的索引开始</strong>，比较当前节点的值与目标值。如果当前节点的值小于目标值，则沿着当前层向右移动；如果当前节点的值大于目标值，则下降到下一层继续比较。重复这个过程，直到找到目标值或者到达最底层。<br><img src="/images/image-1.png" alt="alt text"><br>我们查找71，首先最高的索引节点值为31, 我们直接跳到31节点了，省去了一个一个往后移的过程。<br>在实现的时候，找索引的过程可以直接遍历。因为跳表的高度最高为logn。<strong>查找的复杂度等于最高复杂度</strong>，不会增加理论复杂度。虽然理论上来说二分查找会更好。因此我们选用遍历的方式。</p>
