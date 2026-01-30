@@ -159,6 +159,136 @@
           <div id="js-content" class="content-ll">
             
   
+    <article id="post-sylar协程调度" class="article article-type-post  article-index" itemscope itemprop="blogPost">
+  <div class="article-inner">
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2026/01/30/sylar%E5%8D%8F%E7%A8%8B%E8%B0%83%E5%BA%A6/">sylar笔记(一) 协程调度</a>
+    </h1>
+  
+
+        
+        <a href="/2026/01/30/sylar%E5%8D%8F%E7%A8%8B%E8%B0%83%E5%BA%A6/" class="archive-article-date">
+  	<time datetime="2026-01-30T06:06:36.306Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2026-01-30</time>
+</a>
+        
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>封装了协程模块之后，实现了用户级线程的切换，其开销甚至小于操作系统线程切换的开销。但是调度算法是比较复杂的，因为涉及到多线程，每个线程又有很多协程，主线程参与不参与调度，等等问题。例如，你无法从线程A的协程切换到线程B的协程。所以协程调度器的设计是非常重要的。当线程A的协程1 swapout时，该切换到哪里？</p>
+        
+          <a class="article-more-a" href="/2026/01/30/sylar%E5%8D%8F%E7%A8%8B%E8%B0%83%E5%BA%A6/#more">more >></a>
+        
+      
+
+      
+    </div>
+    <div class="article-info article-info-index">
+      
+      
+      
+
+      
+        <p class="article-more-link">
+          <a class="article-more-a" href="/2026/01/30/sylar%E5%8D%8F%E7%A8%8B%E8%B0%83%E5%BA%A6/">展开全文 >></a>
+        </p>
+      
+
+      
+      <div class="clearfix"></div>
+    </div>
+  </div>
+</article>
+
+<aside class="wrap-side-operation">
+    <div class="mod-side-operation">
+        
+        <div class="jump-container" id="js-jump-container" style="display:none;">
+            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
+                <i class="icon-font icon-back"></i>
+            </a>
+            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
+                <i class="icon-font icon-plane jump-plane"></i>
+            </div>
+        </div>
+        
+        
+    </div>
+</aside>
+
+
+
+
+  
+    <article id="post-sylarhook阻塞" class="article article-type-post  article-index" itemscope itemprop="blogPost">
+  <div class="article-inner">
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2026/01/30/sylarhook%E9%98%BB%E5%A1%9E/">sylar笔记(二) hook阻塞函数实现协程级阻塞</a>
+    </h1>
+  
+
+        
+        <a href="/2026/01/30/sylarhook%E9%98%BB%E5%A1%9E/" class="archive-article-date">
+  	<time datetime="2026-01-30T04:41:25.836Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2026-01-30</time>
+</a>
+        
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>在socket编程中，阻塞函数会导致整个线程等待操作完成，从而无法处理其他任务。<br>首先，对于单线程的应用程序，例如redis，这么做的话会导致阻塞整个进程，无法完成其他请求。对于多线程的应用程序，例如web服务器，虽然其他线程可以继续工作，但线程的创建和切换开销较大，且线程数目有限，无法充分利用系统资源。<br>为了实现协程级的阻塞，我们可以使用hook技术，将阻塞函数替换为非阻塞版本，并在协程调度器中管理协程的切换。<br>原理就是，当协程调用阻塞函数的时候(read)，通过hook替换为自己实现版本，我们通过<code>read-&gt;切换其他协程并且设置定时器-&gt;切换回来-&gt;read</code>实现协程级阻塞。<br>**协程级阻塞对于操作系统来说仍然是非阻塞的，但是对于协程来说是阻塞函数。**所以仍然可以使用epoll等IO多路复用技术来监听多个socket的读写事件，从而实现高并发处理。<br>简单来说，就是通过用非阻塞函数不断重试，在等待的时候切换其他协程来实现。</p>
+        
+          <a class="article-more-a" href="/2026/01/30/sylarhook%E9%98%BB%E5%A1%9E/#more">more >></a>
+        
+      
+
+      
+    </div>
+    <div class="article-info article-info-index">
+      
+      
+      
+
+      
+        <p class="article-more-link">
+          <a class="article-more-a" href="/2026/01/30/sylarhook%E9%98%BB%E5%A1%9E/">展开全文 >></a>
+        </p>
+      
+
+      
+      <div class="clearfix"></div>
+    </div>
+  </div>
+</article>
+
+<aside class="wrap-side-operation">
+    <div class="mod-side-operation">
+        
+        <div class="jump-container" id="js-jump-container" style="display:none;">
+            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
+                <i class="icon-font icon-back"></i>
+            </a>
+            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
+                <i class="icon-font icon-plane jump-plane"></i>
+            </div>
+        </div>
+        
+        
+    </div>
+</aside>
+
+
+
+
+  
     <article id="post-社会性动物4" class="article article-type-post  article-index" itemscope itemprop="blogPost">
   <div class="article-inner">
     

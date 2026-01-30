@@ -6,18 +6,23 @@
   <meta name="renderer" content="webkit">
   <meta http-equiv="X-UA-Compatible" content="IE=edge" >
   <link rel="dns-prefetch" href="https://evanliang6.github.io">
-  <title>Archives | evan&#39;s blog</title>
+  <title>sylar笔记(一) 协程调度 | evan&#39;s blog</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <meta name="description" content="blog">
-<meta property="og:type" content="website">
-<meta property="og:title" content="evan&#39;s blog">
-<meta property="og:url" content="https://evanliang6.github.io/archives/index.html">
+  <meta name="description" content="封装了协程模块之后，实现了用户级线程的切换，其开销甚至小于操作系统线程切换的开销。但是调度算法是比较复杂的，因为涉及到多线程，每个线程又有很多协程，主线程参与不参与调度，等等问题。例如，你无法从线程A的协程切换到线程B的协程。所以协程调度器的设计是非常重要的。当线程A的协程1 swapout时，该切换到哪里？">
+<meta property="og:type" content="article">
+<meta property="og:title" content="sylar笔记(一) 协程调度">
+<meta property="og:url" content="https://evanliang6.github.io/2026/01/30/sylar%E5%8D%8F%E7%A8%8B%E8%B0%83%E5%BA%A6/index.html">
 <meta property="og:site_name" content="evan&#39;s blog">
-<meta property="og:description" content="blog">
+<meta property="og:description" content="封装了协程模块之后，实现了用户级线程的切换，其开销甚至小于操作系统线程切换的开销。但是调度算法是比较复杂的，因为涉及到多线程，每个线程又有很多协程，主线程参与不参与调度，等等问题。例如，你无法从线程A的协程切换到线程B的协程。所以协程调度器的设计是非常重要的。当线程A的协程1 swapout时，该切换到哪里？">
 <meta property="og:locale">
+<meta property="og:image" content="https://evanliang6.github.io/image-5.png">
+<meta property="og:image" content="https://evanliang6.github.io/image-6.png">
+<meta property="article:published_time" content="2026-01-30T06:06:36.306Z">
+<meta property="article:modified_time" content="2026-01-30T08:08:59.511Z">
 <meta property="article:author" content="Liang Yifan">
 <meta property="article:tag" content="Liang Yifan">
 <meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://evanliang6.github.io/image-5.png">
   
     <link rel="alternative" href="/atom.xml" title="evan&#39;s blog" type="application/atom+xml">
   
@@ -157,265 +162,187 @@
             <canvas data-colors="#eaeaea" data-sectionHeight="100" data-contentId="js-content" id="myCanvas1" class="anm-canvas"></canvas>
           </div>
           <div id="js-content" class="content-ll">
-            
+            <article id="post-sylar协程调度" class="article article-type-post " itemscope itemprop="blogPost">
+  <div class="article-inner">
+    
+      <header class="article-header">
+        
   
+    <h1 class="article-title" itemprop="name">
+      sylar笔记(一) 协程调度
+    </h1>
   
-    
-    
-      
-      
-      <section class="archives-wrap">
-        <div class="archive-year-wrap">
-          <a href="/archives/2026" class="archive-year">2026</a>
-        </div>
-        <div class="archives">
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      	<div class="article-meta">
-	      	<a href="/2026/01/30/sylar%E5%8D%8F%E7%A8%8B%E8%B0%83%E5%BA%A6/" class="archive-article-date">
+
+        
+        <a href="/2026/01/30/sylar%E5%8D%8F%E7%A8%8B%E8%B0%83%E5%BA%A6/" class="archive-article-date">
   	<time datetime="2026-01-30T06:06:36.306Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2026-01-30</time>
 </a>
-        </div>
-    	 
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2026/01/30/sylar%E5%8D%8F%E7%A8%8B%E8%B0%83%E5%BA%A6/">sylar笔记(一) 协程调度</a>
-    </h1>
-  
+        
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>封装了协程模块之后，实现了用户级线程的切换，其开销甚至小于操作系统线程切换的开销。但是调度算法是比较复杂的，因为涉及到多线程，每个线程又有很多协程，主线程参与不参与调度，等等问题。例如，你无法从线程A的协程切换到线程B的协程。所以协程调度器的设计是非常重要的。当线程A的协程1 swapout时，该切换到哪里？</p>
+<span id="more"></span>
+<h2 id="协程调度器设计"><a href="#协程调度器设计" class="headerlink" title="协程调度器设计"></a>协程调度器设计</h2><p>本节不探讨协程切换的细节。只探讨协程调度器的设计思路。</p>
+<h3 id="调度器的关键成员"><a href="#调度器的关键成员" class="headerlink" title="调度器的关键成员"></a>调度器的关键成员</h3><figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">std::vector&lt;Thread::ptr&gt; m_threads;</span><br><span class="line">std::list&lt;FiberAndThread&gt; m_fibers;</span><br><span class="line">Fiber::ptr m_rootFiber;<span class="comment">// 调度器主协程</span></span><br></pre></td></tr></table></figure>
+<p>m_threads存放调度器所管理的线程池。m_fibers存放待调度的协程队列。m_rootFiber是调度器的主协程，负责从m_fibers中取出协程执行。</p>
+<h3 id="协程切换规则"><a href="#协程切换规则" class="headerlink" title="协程切换规则"></a>协程切换规则</h3><p>在协程封装的时候，<code>swapin</code>和<code>swapout</code>两个函数都是对于调度器协程而言的。也就是说，当前的fiber只能和调度器协程之间切换。通过静态方法获取调度器所在的fiber.<br>但是调度器和协程不是一对一的。<strong>内存中只存在一个调度器，但是每个线程都有一个协程执行scheduler::run函数。</strong><br>在切换的时候，<strong>协程和自己所在线程的scheduler::run函数所在的协程之间进行上下文切换。</strong>(下文称做<code>rootfiber</code>)<br><code>m_rootFiber</code>和<code>rootfiber</code>又有些不一样。<code>m_rootFiber</code>是调度器的主协程，是调度器对象的成员变量。如果main创建了这个scheduler, <code>m_rootFiber</code>就是main的<code>rootfiber</code>。而<code>rootfiber</code>是每个线程的调度协程，是线程私有的。<br>至于<code>rootfiber</code>切换之后执行什么其他任务，由调度器来决定。<br>至于为什么这么设计，这么设计的好处，还可以怎么设计等问题放在下一个话题进行讨论。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 切换到当前协程执行</span></span><br><span class="line">    <span class="function"><span class="type">void</span> <span class="title">Fiber::swapIn</span><span class="params">()</span></span></span><br><span class="line"><span class="function">    </span>&#123;</span><br><span class="line">        <span class="built_in">SetThis</span>(<span class="keyword">this</span>);</span><br><span class="line">        <span class="built_in">SYLAR_ASSERT</span>(m_state != EXEC);</span><br><span class="line">        m_state = EXEC;</span><br><span class="line">        <span class="keyword">if</span> (<span class="built_in">swapcontext</span>(&amp;Scheduler::<span class="built_in">GetMainFiber</span>()-&gt;m_ctx, &amp;m_ctx))<span class="comment">// 获取调度协程的上下文，切换到当前协程</span></span><br><span class="line">        &#123;</span><br><span class="line">            <span class="built_in">SYLAR_ASSERT2</span>(<span class="literal">false</span>, <span class="string">&quot;swapcontext&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 切换到后台执行</span></span><br><span class="line">    <span class="function"><span class="type">void</span> <span class="title">Fiber::swapOut</span><span class="params">()</span></span></span><br><span class="line"><span class="function">    </span>&#123;</span><br><span class="line">        <span class="built_in">SetThis</span>(Scheduler::<span class="built_in">GetMainFiber</span>());</span><br><span class="line">        <span class="keyword">if</span> (<span class="built_in">swapcontext</span>(&amp;m_ctx, &amp;Scheduler::<span class="built_in">GetMainFiber</span>()-&gt;m_ctx))<span class="comment">// 获取调度协程的上下文，切换到调度协程</span></span><br><span class="line">        &#123;</span><br><span class="line">            <span class="built_in">SYLAR_ASSERT2</span>(<span class="literal">false</span>, <span class="string">&quot;swapcontext&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
 
-        <div class="article-info info-on-right">
-          
-          
+<h3 id="协程调度器的初始化"><a href="#协程调度器的初始化" class="headerlink" title="协程调度器的初始化"></a>协程调度器的初始化</h3><p>协程调度器在初始化的时候考虑了两种情况，一种是主线程也作为调度线程，另一种是主线程不作为调度线程。如果主线程不参与调度，那么可以继续执行其他任务。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">Scheduler::<span class="built_in">Scheduler</span>(<span class="type">size_t</span> threads, <span class="type">bool</span> use_caller, <span class="type">const</span> std::string&amp; name)</span><br><span class="line">    :<span class="built_in">m_name</span>(name) &#123;</span><br><span class="line">    <span class="built_in">SYLAR_ASSERT</span>(threads &gt; <span class="number">0</span>);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span>(use_caller) &#123;<span class="comment">// 主线程作为调度线程</span></span><br><span class="line">        sylar::Fiber::<span class="built_in">GetThis</span>();<span class="comment">// 创建主线程的主协程</span></span><br><span class="line">        --threads;</span><br><span class="line"></span><br><span class="line">        <span class="built_in">SYLAR_ASSERT</span>(<span class="built_in">GetThis</span>() == <span class="literal">nullptr</span>);</span><br><span class="line">        t_scheduler = <span class="keyword">this</span>;</span><br><span class="line"></span><br><span class="line">        m_rootFiber.<span class="built_in">reset</span>(<span class="keyword">new</span> <span class="built_in">Fiber</span>(std::<span class="built_in">bind</span>(&amp;Scheduler::run, <span class="keyword">this</span>), <span class="number">0</span>, <span class="literal">true</span>));<span class="comment">// 创建一个fiber,执行run调度函数。</span></span><br><span class="line">        sylar::Thread::<span class="built_in">SetName</span>(m_name);</span><br><span class="line"></span><br><span class="line">        t_scheduler_fiber = m_rootFiber.<span class="built_in">get</span>();<span class="comment">// 设置当前线程正在执行的协程为调度协程</span></span><br><span class="line">        m_rootThread = sylar::<span class="built_in">GetThreadId</span>();</span><br><span class="line">        m_threadIds.<span class="built_in">push_back</span>(m_rootThread);</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        m_rootThread = <span class="number">-1</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    m_threadCount = threads;<span class="comment">// 剩下的threads作为工作线程</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
+<h3 id="每个线程的调度协程干了什么"><a href="#每个线程的调度协程干了什么" class="headerlink" title="每个线程的调度协程干了什么"></a>每个线程的调度协程干了什么</h3><p>代码很长是因为可以往任务池里放入fiber,也可以放入callback函数。但是思路是一样的。如果放入cb，封装成fiber即可。<br>简而言之就是从任务池里取出一个任务执行(加锁)，执行完后继续取下一个任务执行。如果没有任务了，就执行idle协程，idle协程负责让出协程控制权，避免空转浪费CPU资源。如果执行过程中swapout, 就继续放入任务池等待下次调度。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="type">void</span> <span class="title">Scheduler::run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="built_in">SYLAR_LOG_INFO</span>(g_logger) &lt;&lt; <span class="string">&quot;run&quot;</span>;</span><br><span class="line">    <span class="built_in">set_hook_enable</span>(<span class="literal">true</span>);</span><br><span class="line">    <span class="built_in">setThis</span>();<span class="comment">// 设置当前调度器</span></span><br><span class="line">    <span class="keyword">if</span>(sylar::<span class="built_in">GetThreadId</span>() != m_rootThread) &#123;</span><br><span class="line">        t_scheduler_fiber = Fiber::<span class="built_in">GetThis</span>().<span class="built_in">get</span>();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function">Fiber::ptr <span class="title">idle_fiber</span><span class="params">(<span class="keyword">new</span> Fiber(std::bind(&amp;Scheduler::idle, <span class="keyword">this</span>)))</span></span>;</span><br><span class="line">    Fiber::ptr cb_fiber;<span class="comment">// 用于处理传入的callback</span></span><br><span class="line"></span><br><span class="line">    FiberAndThread ft;</span><br><span class="line">    <span class="keyword">while</span>(<span class="literal">true</span>) &#123;</span><br><span class="line">        ft.<span class="built_in">reset</span>();</span><br><span class="line">        <span class="type">bool</span> tickle_me = <span class="literal">false</span>;</span><br><span class="line">        <span class="type">bool</span> is_active=<span class="literal">false</span>;<span class="comment">// 是否执行了任务</span></span><br><span class="line">        &#123;</span><br><span class="line">            <span class="function">MutexType::Lock <span class="title">lock</span><span class="params">(m_mutex)</span></span>;</span><br><span class="line">            <span class="keyword">auto</span> it = m_fibers.<span class="built_in">begin</span>();</span><br><span class="line">            <span class="keyword">while</span>(it != m_fibers.<span class="built_in">end</span>()) &#123;<span class="comment">// 拿出一个任务</span></span><br><span class="line">                <span class="keyword">if</span>(it-&gt;thread != <span class="number">-1</span> &amp;&amp; it-&gt;thread != sylar::<span class="built_in">GetThreadId</span>()) &#123;<span class="comment">// 不是给当前线程执行</span></span><br><span class="line">                    ++it;</span><br><span class="line">                    tickle_me = <span class="literal">true</span>;<span class="comment">// 有其他线程要执行，通知它们</span></span><br><span class="line">                    <span class="keyword">continue</span>;</span><br><span class="line">                &#125;</span><br><span class="line"></span><br><span class="line">                <span class="built_in">SYLAR_ASSERT</span>(it-&gt;fiber || it-&gt;cb);</span><br><span class="line">                <span class="keyword">if</span>(it-&gt;fiber &amp;&amp; it-&gt;fiber-&gt;<span class="built_in">getState</span>() == Fiber::EXEC) &#123;<span class="comment">// 已经在执行状态</span></span><br><span class="line">                    ++it;</span><br><span class="line">                    <span class="keyword">continue</span>;</span><br><span class="line">                &#125;</span><br><span class="line"></span><br><span class="line">                ft = *it;</span><br><span class="line">                m_fibers.<span class="built_in">erase</span>(it);</span><br><span class="line">                ++m_activeThreadCount;</span><br><span class="line">                is_active = <span class="literal">true</span>;</span><br><span class="line">                <span class="keyword">break</span>;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span>(tickle_me) &#123;</span><br><span class="line">            <span class="built_in">tickle</span>();</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span>(ft.fiber &amp;&amp; (ft.fiber-&gt;<span class="built_in">getState</span>() != Fiber::TERM</span><br><span class="line">                        &amp;&amp; ft.fiber-&gt;<span class="built_in">getState</span>() != Fiber::EXCEPT)) &#123;</span><br><span class="line">            <span class="comment">// 一个线程同一时间只能有一个协程在执行</span></span><br><span class="line"></span><br><span class="line">            ft.fiber-&gt;<span class="built_in">swapIn</span>();<span class="comment">// 执行这个协程</span></span><br><span class="line">            --m_activeThreadCount;</span><br><span class="line"></span><br><span class="line">            <span class="keyword">if</span>(ft.fiber-&gt;<span class="built_in">getState</span>() == Fiber::READY ) &#123;<span class="comment">// 执行完后是READY状态，继续加入调度</span></span><br><span class="line">                <span class="built_in">schedule</span>(ft.fiber);</span><br><span class="line">            &#125; <span class="keyword">else</span> <span class="keyword">if</span>(ft.fiber-&gt;<span class="built_in">getState</span>() != Fiber::TERM</span><br><span class="line">                    &amp;&amp; ft.fiber-&gt;<span class="built_in">getState</span>() != Fiber::EXCEPT) &#123;</span><br><span class="line">                ft.fiber-&gt;m_state = Fiber::HOLD;</span><br><span class="line">            &#125;</span><br><span class="line">            ft.<span class="built_in">reset</span>();</span><br><span class="line">        &#125; <span class="keyword">else</span> <span class="keyword">if</span>(ft.cb) &#123;</span><br><span class="line">            <span class="keyword">if</span>(cb_fiber) &#123;</span><br><span class="line">                cb_fiber-&gt;<span class="built_in">reset</span>(ft.cb);</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                cb_fiber.<span class="built_in">reset</span>(<span class="keyword">new</span> <span class="built_in">Fiber</span>(ft.cb));</span><br><span class="line">            &#125;</span><br><span class="line">            ft.<span class="built_in">reset</span>();</span><br><span class="line"></span><br><span class="line">            cb_fiber-&gt;<span class="built_in">swapIn</span>();</span><br><span class="line">            --m_activeThreadCount;</span><br><span class="line">            <span class="keyword">if</span>(cb_fiber-&gt;<span class="built_in">getState</span>() == Fiber::READY) &#123;</span><br><span class="line">                <span class="built_in">schedule</span>(cb_fiber);</span><br><span class="line">                cb_fiber.<span class="built_in">reset</span>();</span><br><span class="line">            &#125; <span class="keyword">else</span> <span class="keyword">if</span>(cb_fiber-&gt;<span class="built_in">getState</span>() == Fiber::EXCEPT</span><br><span class="line">                    || cb_fiber-&gt;<span class="built_in">getState</span>() == Fiber::TERM) &#123;</span><br><span class="line">                cb_fiber-&gt;<span class="built_in">reset</span>(<span class="literal">nullptr</span>);</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;<span class="comment">//if(cb_fiber-&gt;getState() != Fiber::TERM) &#123;</span></span><br><span class="line">                cb_fiber-&gt;m_state = Fiber::HOLD;</span><br><span class="line">                cb_fiber.<span class="built_in">reset</span>();</span><br><span class="line">            &#125;</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="keyword">if</span>(is_active)&#123;</span><br><span class="line">                --m_activeThreadCount;</span><br><span class="line">                <span class="keyword">continue</span>;</span><br><span class="line">            &#125;</span><br><span class="line">                </span><br><span class="line">            <span class="keyword">if</span>(idle_fiber-&gt;<span class="built_in">getState</span>() == Fiber::TERM) &#123;</span><br><span class="line">                <span class="built_in">SYLAR_LOG_INFO</span>(g_logger) &lt;&lt; <span class="string">&quot;idle fiber term&quot;</span>;</span><br><span class="line">                <span class="keyword">break</span>;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="comment">// 执行idle</span></span><br><span class="line">            ++m_idleThreadCount;</span><br><span class="line">            idle_fiber-&gt;<span class="built_in">swapIn</span>();</span><br><span class="line">            --m_idleThreadCount;</span><br><span class="line">            <span class="keyword">if</span>(idle_fiber-&gt;<span class="built_in">getState</span>() != Fiber::TERM</span><br><span class="line">                    &amp;&amp; idle_fiber-&gt;<span class="built_in">getState</span>() != Fiber::EXCEPT) &#123;</span><br><span class="line">                idle_fiber-&gt;m_state = Fiber::HOLD;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="idle和tickle有什么意义"><a href="#idle和tickle有什么意义" class="headerlink" title="idle和tickle有什么意义"></a>idle和tickle有什么意义</h3><p>在任务调度这里idle和tickle没有意义。但是后续iomanager继承scheduler之后，idle和tickle就有意义了。idle协程负责等待IO事件，tickle负责唤醒其他线程。</p>
+<h3 id="简单结构图"><a href="#简单结构图" class="headerlink" title="简单结构图"></a>简单结构图</h3><p>结构示意图：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">Scheduler（全局 1 个）</span><br><span class="line">│</span><br><span class="line">├── Thread 1  ── rootFiber₁ ── run()</span><br><span class="line">│                   ├─ 执行 A</span><br><span class="line">│                   ├─ 执行 B</span><br><span class="line">│                   └─ idle</span><br><span class="line">│</span><br><span class="line">├── Thread 2  ── rootFiber₂ ── run()</span><br><span class="line">│                   ├─ 执行 C</span><br><span class="line">│                   ├─ 执行 D</span><br><span class="line">│                   └─ idle</span><br><span class="line">│</span><br><span class="line">└── Thread 3  ── rootFiber₃ ── run()</span><br><span class="line">                    ├─ 执行 E</span><br><span class="line">                    └─ idle</span><br></pre></td></tr></table></figure>
+<p>run():不断获取任务执行，任务执行完后继续获取下一个任务执行。如果没有任务了，就执行idle协程。</p>
+<p>具体调度示意图：<br>usecaller&#x3D;false的main线程情况：<br><img src="/image-5.png" alt="alt text"></p>
+<p>usecaller&#x3D;true的main线程情况：<br><img src="/image-6.png" alt="alt text"></p>
+<h2 id="设计的好处"><a href="#设计的好处" class="headerlink" title="设计的好处"></a>设计的好处</h2><p>该协程调度器采用 M:N 协程模型 + 中央调度器 + 非抢占式切换 的设计：<br>一个 Scheduler 管理多个线程<br>每个线程运行一个 rootFiber 作为调度循环<br>所有 Fiber 只与 rootFiber 切换<br>统一从任务队列中获取任务执行</p>
+<p>这种设计具备：<br>低切换开销<br>低锁竞争<br>高扩展性<br>易于维护<br>易于扩展 IO &#x2F; Timer &#x2F; 事件驱动模型</p>
+<h3 id="为什么协程切换开销比线程更低"><a href="#为什么协程切换开销比线程更低" class="headerlink" title="为什么协程切换开销比线程更低"></a>为什么协程切换开销比线程更低</h3><p>协程之间的切换只涉及到用户态的上下文切换，即切换CPU寄存器和栈指针等，而不涉及内核态的上下文切换，不需要系统调用，本质类似函数调用；线程切换经过TCB和内核的scheduler，开销更大。而且线程有独立的栈，内存开销更大。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">用户态</span><br><span class="line">  ↓ syscall</span><br><span class="line">内核态</span><br><span class="line">  ↓ save 到 TCB</span><br><span class="line">  ↓ schedule()</span><br><span class="line">  ↓ restore 新 TCB</span><br><span class="line">  ↓ return</span><br><span class="line">用户态</span><br></pre></td></tr></table></figure>
+<p>ps: 为什么进程切换开销比线程更大<br>进程切换与线程切换的一个最主要区别就在于进程切换涉及到虚拟地址空间的切换而线程切换则不会。因为每个进程都有自己的虚拟地址空间，而线程是共享所在进程的虚拟地址空间的，因此同一个进程中的线程进行线程切换时不涉及虚拟地址空间的转换。<br>地址空间切换导致TLB失效，需要重新加载页表，增加了开销。PCB比TCB更大(例如fd)，cache 污染更严重</p>
+<h3 id="为什么协程只能和主协程切换？"><a href="#为什么协程只能和主协程切换？" class="headerlink" title="为什么协程只能和主协程切换？"></a>为什么协程只能和主协程切换？</h3><p>虽然协程之间任意切换可以提高效率，但是明显更加复杂和不可控。<br>需要：保存任意调用栈，维护复杂状态机，容易形成循环切换，调试困难</p>
+<h3 id="为什么不抢占"><a href="#为什么不抢占" class="headerlink" title="为什么不抢占"></a>为什么不抢占</h3><p>抢占涉及到定时器，信号，强制切换等复杂问题。协程切换完全由用户控制，更加简单和高效。协程切换的时机由用户决定，可以在合适的地方切换，避免不必要的上下文切换开销。如果有锁，协程切换可能导致死锁等问题。</p>
+<h2 id="一些细节"><a href="#一些细节" class="headerlink" title="一些细节"></a>一些细节</h2><figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">std::atomic&lt;<span class="type">size_t</span>&gt; m_activeThreadCount = &#123;<span class="number">0</span>&#125;;</span><br><span class="line">std::atomic&lt;<span class="type">size_t</span>&gt; m_idleThreadCount = &#123;<span class="number">0</span>&#125;;</span><br></pre></td></tr></table></figure>
+<p>原子量计数。相较于加锁更加的高效，而且不会冲突。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="keyword">thread_local</span> Scheduler* t_scheduler = <span class="literal">nullptr</span>;</span><br><span class="line"><span class="type">static</span> <span class="keyword">thread_local</span> Fiber* t_scheduler_fiber = <span class="literal">nullptr</span>;</span><br></pre></td></tr></table></figure>
+<p>通过全局静态变量加上thread_local实现线程独有的全局变量。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line">    <span class="function">MutexType::Lock <span class="title">lock</span><span class="params">(m_mutex)</span></span>;</span><br><span class="line">    <span class="keyword">auto</span> it = m_fibers.<span class="built_in">begin</span>();</span><br><span class="line">    <span class="keyword">while</span>(it != m_fibers.<span class="built_in">end</span>()) &#123;<span class="comment">// 拿出一个任务</span></span><br><span class="line">        <span class="keyword">if</span>(it-&gt;thread != <span class="number">-1</span> &amp;&amp; it-&gt;thread !sylar::<span class="built_in">GetThreadId</span>()) &#123;<span class="comment">// 不是给当前线程执行</span></span><br><span class="line">            ++it;</span><br><span class="line">            tickle_me = <span class="literal">true</span>;<span class="comment">// 有其他线程要执行，通知它们</span></span><br><span class="line">            <span class="keyword">continue</span>;</span><br><span class="line">        </span><br><span class="line">        <span class="built_in">SYLAR_ASSERT</span>(it-&gt;fiber || it-&gt;cb);</span><br><span class="line">        <span class="keyword">if</span>(it-&gt;fiber &amp;&amp; it-&gt;fiber-&gt;<span class="built_in">getState</span>() == Fiber::EXEC&#123;<span class="comment">// 已经在执行状态</span></span><br><span class="line">            ++it;</span><br><span class="line">            <span class="keyword">continue</span>;</span><br><span class="line">        </span><br><span class="line">        ft = *it;</span><br><span class="line">        m_fibers.<span class="built_in">erase</span>(it);</span><br><span class="line">        ++m_activeThreadCount;</span><br><span class="line">        is_active = <span class="literal">true</span>;</span><br><span class="line">        <span class="keyword">break</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>取任务的时候加锁了，但是取完任务之后出了作用域没有释放锁。这是有名的RAII思想。随着lock对象的析构，锁会自动释放。所以执行任务可以并发，也可以并行(前提是多核CPU)。</p>
+
+      
+
+      
+        <div class="page-reward">
+          <a href="javascript:;" class="page-reward-btn tooltip-top">
+            <div class="tooltip tooltip-east">
+            <span class="tooltip-item">
+              赏
+            </span>
+            <span class="tooltip-content">
+              <span class="tooltip-text">
+                <span class="tooltip-inner">
+                  <p class="reward-p"><i class="icon icon-quo-left"></i>谢谢你请我吃糖果<i class="icon icon-quo-right"></i></p>
+                  <div class="reward-box">
+                    
+                    
+                  </div>
+                </span>
+              </span>
+            </span>
+          </div>
+          </a>
         </div>
-        <div class="clearfix"></div>
-    </header>
+      
+    </div>
+    <div class="article-info article-info-index">
+      
+      
+      
+
+      
+
+      
+        
+<div class="share-btn share-icons tooltip-left">
+  <div class="tooltip tooltip-east">
+    <span class="tooltip-item">
+      <a href="javascript:;" class="share-sns share-outer">
+        <i class="icon icon-share"></i>
+      </a>
+    </span>
+    <span class="tooltip-content">
+      <div class="share-wrap">
+        <div class="share-icons">
+          <a class="weibo share-sns" href="javascript:;" data-type="weibo">
+            <i class="icon icon-weibo"></i>
+          </a>
+          <a class="weixin share-sns wxFab" href="javascript:;" data-type="weixin">
+            <i class="icon icon-weixin"></i>
+          </a>
+          <a class="qq share-sns" href="javascript:;" data-type="qq">
+            <i class="icon icon-qq"></i>
+          </a>
+          <a class="douban share-sns" href="javascript:;" data-type="douban">
+            <i class="icon icon-douban"></i>
+          </a>
+          <a class="qzone share-sns" href="javascript:;" data-type="qzone">
+            <i class="icon icon-qzone"></i>
+          </a>
+          <a class="facebook share-sns" href="javascript:;" data-type="facebook">
+            <i class="icon icon-facebook"></i>
+          </a>
+          <a class="twitter share-sns" href="javascript:;" data-type="twitter">
+            <i class="icon icon-twitter"></i>
+          </a>
+          <a class="google share-sns" href="javascript:;" data-type="google">
+            <i class="icon icon-google"></i>
+          </a>
+        </div>
+      </div>
+    </span>
+  </div>
+</div>
+
+<div class="page-modal wx-share js-wx-box">
+    <a class="close js-modal-close" href="javascript:;"><i class="icon icon-close"></i></a>
+    <p>扫一扫，分享到微信</p>
+    <div class="wx-qrcode">
+      <img src="//pan.baidu.com/share/qrcode?url=https://evanliang6.github.io/2026/01/30/sylar%E5%8D%8F%E7%A8%8B%E8%B0%83%E5%BA%A6/" alt="微信分享二维码">
+    </div>
+</div>
+
+<div class="mask js-mask"></div>
+      
+      <div class="clearfix"></div>
+    </div>
   </div>
 </article>
+
   
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      	<div class="article-meta">
-	      	<a href="/2026/01/30/sylarhook%E9%98%BB%E5%A1%9E/" class="archive-article-date">
-  	<time datetime="2026-01-30T04:41:25.836Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2026-01-30</time>
-</a>
+<nav id="article-nav">
+  
+  
+    <a href="/2026/01/30/sylarhook%E9%98%BB%E5%A1%9E/" id="article-nav-older" class="article-nav-link-wrap">
+      <div class="article-nav-title">sylar笔记(二) hook阻塞函数实现协程级阻塞</div>
+      <i class="icon-circle-right"></i>
+    </a>
+  
+</nav>
+
+
+<aside class="wrap-side-operation">
+    <div class="mod-side-operation">
+        
+        <div class="jump-container" id="js-jump-container" style="display:none;">
+            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
+                <i class="icon-font icon-back"></i>
+            </a>
+            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
+                <i class="icon-font icon-plane jump-plane"></i>
+            </div>
         </div>
-    	 
+        
+        
+    </div>
+</aside>
+
+
+
   
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2026/01/30/sylarhook%E9%98%BB%E5%A1%9E/">sylar笔记(二) hook阻塞函数实现协程级阻塞</a>
-    </h1>
+  
   
 
-        <div class="article-info info-on-right">
-          
-          
-
-        </div>
-        <div class="clearfix"></div>
-    </header>
-  </div>
-</article>
-  
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      	<div class="article-meta">
-	      	<a href="/2026/01/30/%E7%A4%BE%E4%BC%9A%E6%80%A7%E5%8A%A8%E7%89%A94/" class="archive-article-date">
-  	<time datetime="2026-01-30T04:29:54.956Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2026-01-30</time>
-</a>
-        </div>
-    	 
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2026/01/30/%E7%A4%BE%E4%BC%9A%E6%80%A7%E5%8A%A8%E7%89%A94/">社会性动物读书笔记(四) 大众传播、宣传与说服</a>
-    </h1>
   
 
-        <div class="article-info info-on-right">
-          
-          
-
-        </div>
-        <div class="clearfix"></div>
-    </header>
-  </div>
-</article>
-  
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      	<div class="article-meta">
-	      	<a href="/2026/01/30/%E7%A4%BE%E4%BC%9A%E6%80%A7%E5%8A%A8%E7%89%A93/" class="archive-article-date">
-  	<time datetime="2026-01-30T04:28:01.709Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2026-01-30</time>
-</a>
-        </div>
-    	 
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2026/01/30/%E7%A4%BE%E4%BC%9A%E6%80%A7%E5%8A%A8%E7%89%A93/">社会性动物读书笔记(三) 从众</a>
-    </h1>
   
 
-        <div class="article-info info-on-right">
-          
-          
-
-        </div>
-        <div class="clearfix"></div>
-    </header>
-  </div>
-</article>
   
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      	<div class="article-meta">
-	      	<a href="/2026/01/30/%E7%A4%BE%E4%BC%9A%E6%80%A7%E5%8A%A8%E7%89%A92/" class="archive-article-date">
-  	<time datetime="2026-01-30T04:20:43.665Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2026-01-30</time>
-</a>
-        </div>
-    	 
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2026/01/30/%E7%A4%BE%E4%BC%9A%E6%80%A7%E5%8A%A8%E7%89%A92/">社会性动物读书笔记(二) 自我辩护</a>
-    </h1>
-  
-
-        <div class="article-info info-on-right">
-          
-          
-
-        </div>
-        <div class="clearfix"></div>
-    </header>
-  </div>
-</article>
-  
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      	<div class="article-meta">
-	      	<a href="/2026/01/29/%E7%A4%BE%E4%BC%9A%E6%80%A7%E5%8A%A8%E7%89%A91/" class="archive-article-date">
-  	<time datetime="2026-01-29T07:14:08.739Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2026-01-29</time>
-</a>
-        </div>
-    	 
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2026/01/29/%E7%A4%BE%E4%BC%9A%E6%80%A7%E5%8A%A8%E7%89%A91/">社会性动物读书笔记(一) 社会认知</a>
-    </h1>
-  
-
-        <div class="article-info info-on-right">
-          
-          
-
-        </div>
-        <div class="clearfix"></div>
-    </header>
-  </div>
-</article>
-  
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      	<div class="article-meta">
-	      	<a href="/2026/01/28/skiplist/" class="archive-article-date">
-  	<time datetime="2026-01-28T12:48:03.054Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2026-01-28</time>
-</a>
-        </div>
-    	 
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2026/01/28/skiplist/">从零实现redis(一) 跳表(skiplist)</a>
-    </h1>
-  
-
-        <div class="article-info info-on-right">
-          
-          
-
-        </div>
-        <div class="clearfix"></div>
-    </header>
-  </div>
-</article>
-  
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      	<div class="article-meta">
-	      	<a href="/2026/01/28/C++11%20%E6%9D%82%E9%A1%B9%E9%9A%8F%E7%AC%94/" class="archive-article-date">
-  	<time datetime="2026-01-28T04:10:42.064Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2026-01-28</time>
-</a>
-        </div>
-    	 
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2026/01/28/C++11%20%E6%9D%82%E9%A1%B9%E9%9A%8F%E7%AC%94/">C++11 杂项随笔</a>
-    </h1>
-  
-
-        <div class="article-info info-on-right">
-          
-          
-
-        </div>
-        <div class="clearfix"></div>
-    </header>
-  </div>
-</article>
-  
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      	<div class="article-meta">
-	      	<a href="/2026/01/16/About-me/" class="archive-article-date">
-  	<time datetime="2026-01-15T17:06:41.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2026-01-16</time>
-</a>
-        </div>
-    	 
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2026/01/16/About-me/">About me</a>
-    </h1>
-  
-
-        <div class="article-info info-on-right">
-          
-          
-
-        </div>
-        <div class="clearfix"></div>
-    </header>
-  </div>
-</article>
-  
-  
-    </div></section>
-  
-
-    
 
 
           </div>
@@ -453,8 +380,8 @@
 	var yiliaConfig = {
 		mathjax: false,
 		isHome: false,
-		isPost: false,
-		isArchive: true,
+		isPost: true,
+		isArchive: false,
 		isTag: false,
 		isCategory: false,
 		open_in_new: false,
