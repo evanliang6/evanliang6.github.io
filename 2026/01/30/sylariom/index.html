@@ -6,17 +6,17 @@
   <meta name="renderer" content="webkit">
   <meta http-equiv="X-UA-Compatible" content="IE=edge" >
   <link rel="dns-prefetch" href="https://evanliang6.github.io">
-  <title>sylar笔记(三) hook阻塞函数实现协程级阻塞 | evan&#39;s blog</title>
+  <title>sylar笔记(二) IOmanager继承Scheduler实现IO协程调度 | evan&#39;s blog</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <meta name="description" content="在socket编程中，阻塞函数会导致整个线程等待操作完成，从而无法处理其他任务。首先，对于单线程的应用程序，例如redis，这么做的话会导致阻塞整个进程，无法完成其他请求。对于多线程的应用程序，例如web服务器，虽然其他线程可以继续工作，但线程的创建和切换开销较大，且线程数目有限，无法充分利用系统资源。为了实现协程级的阻塞，我们可以使用hook技术，将阻塞函数替换为非阻塞版本，并在协程调度器中管理">
+  <meta name="description" content="对于用epoll的IO多路复用模型，创建一个fiber来去处理到达的IO事件是非常合适的。因为IO事件本质上是等待某个条件满足，然后继续执行后续操作。这个后续操作可以通过Scheduler来实现。因此IOmanager继承Scheduler并且通过协程来处理epoll注册的事件。同时也探讨了如何防止惊群效应的问题。">
 <meta property="og:type" content="article">
-<meta property="og:title" content="sylar笔记(三) hook阻塞函数实现协程级阻塞">
-<meta property="og:url" content="https://evanliang6.github.io/2026/01/30/sylarhook%E9%98%BB%E5%A1%9E/index.html">
+<meta property="og:title" content="sylar笔记(二) IOmanager继承Scheduler实现IO协程调度">
+<meta property="og:url" content="https://evanliang6.github.io/2026/01/30/sylariom/index.html">
 <meta property="og:site_name" content="evan&#39;s blog">
-<meta property="og:description" content="在socket编程中，阻塞函数会导致整个线程等待操作完成，从而无法处理其他任务。首先，对于单线程的应用程序，例如redis，这么做的话会导致阻塞整个进程，无法完成其他请求。对于多线程的应用程序，例如web服务器，虽然其他线程可以继续工作，但线程的创建和切换开销较大，且线程数目有限，无法充分利用系统资源。为了实现协程级的阻塞，我们可以使用hook技术，将阻塞函数替换为非阻塞版本，并在协程调度器中管理">
+<meta property="og:description" content="对于用epoll的IO多路复用模型，创建一个fiber来去处理到达的IO事件是非常合适的。因为IO事件本质上是等待某个条件满足，然后继续执行后续操作。这个后续操作可以通过Scheduler来实现。因此IOmanager继承Scheduler并且通过协程来处理epoll注册的事件。同时也探讨了如何防止惊群效应的问题。">
 <meta property="og:locale">
-<meta property="article:published_time" content="2026-01-30T04:41:25.836Z">
-<meta property="article:modified_time" content="2026-01-31T13:27:08.336Z">
+<meta property="article:published_time" content="2026-01-30T09:36:23.458Z">
+<meta property="article:modified_time" content="2026-01-31T13:56:31.379Z">
 <meta property="article:author" content="Liang Yifan">
 <meta property="article:tag" content="Liang Yifan">
 <meta name="twitter:card" content="summary">
@@ -159,36 +159,55 @@
             <canvas data-colors="#eaeaea" data-sectionHeight="100" data-contentId="js-content" id="myCanvas1" class="anm-canvas"></canvas>
           </div>
           <div id="js-content" class="content-ll">
-            <article id="post-sylarhook阻塞" class="article article-type-post " itemscope itemprop="blogPost">
+            <article id="post-sylariom" class="article article-type-post " itemscope itemprop="blogPost">
   <div class="article-inner">
     
       <header class="article-header">
         
   
     <h1 class="article-title" itemprop="name">
-      sylar笔记(三) hook阻塞函数实现协程级阻塞
+      sylar笔记(二) IOmanager继承Scheduler实现IO协程调度
     </h1>
   
 
         
-        <a href="/2026/01/30/sylarhook%E9%98%BB%E5%A1%9E/" class="archive-article-date">
-  	<time datetime="2026-01-30T04:41:25.836Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2026-01-30</time>
+        <a href="/2026/01/30/sylariom/" class="archive-article-date">
+  	<time datetime="2026-01-30T09:36:23.458Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2026-01-30</time>
 </a>
         
       </header>
     
     <div class="article-entry" itemprop="articleBody">
       
-        <p>在socket编程中，阻塞函数会导致整个线程等待操作完成，从而无法处理其他任务。<br>首先，对于单线程的应用程序，例如redis，这么做的话会导致阻塞整个进程，无法完成其他请求。对于多线程的应用程序，例如web服务器，虽然其他线程可以继续工作，但线程的创建和切换开销较大，且线程数目有限，无法充分利用系统资源。<br>为了实现协程级的阻塞，我们可以使用hook技术，将阻塞函数替换为非阻塞版本，并在协程调度器中管理协程的切换。<br>原理就是，当协程调用阻塞函数的时候(read)，通过hook替换为自己实现版本，我们通过<code>read-&gt;切换其他协程并且设置定时器-&gt;切换回来-&gt;read</code>实现协程级阻塞。<br><strong>协程级阻塞对于操作系统来说仍然是非阻塞的，但是对于协程来说是阻塞函数</strong>。所以仍然可以使用epoll等IO多路复用技术来监听多个socket的读写事件，从而实现高并发处理。<br>简单来说，就是通过用非阻塞函数不断重试，在等待的时候切换其他协程来实现。</p>
+        <p>对于用epoll的IO多路复用模型，创建一个fiber来去处理到达的IO事件是非常合适的。因为IO事件本质上是等待某个条件满足，然后继续执行后续操作。这个后续操作可以通过Scheduler来实现。<strong>因此IOmanager继承Scheduler并且通过协程来处理epoll注册的事件</strong>。同时也探讨了如何防止惊群效应的问题。</p>
 <span id="more"></span>
 
+<h2 id="封装fd"><a href="#封装fd" class="headerlink" title="封装fd"></a>封装fd</h2><p>在实现IOmanager之前，需要先封装fd类。实现对超时时间，fd类型等控制。<br><strong>最关键的是系统非阻塞和用户非阻塞。</strong>。sylar可以实现系统层面非阻塞，但是当你调用了read函数的时候，协程阻塞。**这么做非常符合Reactor模式的设计思想。**具体可以看hook阻塞一章。</p>
+<p>有时候我们只能获取fd。那么就需要fdmanager，通过fd获取对应的封装类。</p>
+<h2 id="封装fd上下文"><a href="#封装fd上下文" class="headerlink" title="封装fd上下文"></a>封装fd上下文</h2><p>在IO协程调度模块中，每个文件描述符(fd)都对应一个FdContext对象。该对象用于管理该fd上的读写事件及其对应的协程和回调函数。<br>对于每个fd上的一个事件，我们需要保存该事件对应的协程和回调函数，以便在事件发生时能够正确地切换回对应的协程或执行回调函数。因此，定义了一个EventContext结构体。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">struct</span> <span class="title class_">FdContext</span> &#123; <span class="comment">// 每个fd对应一个FdContext</span></span><br><span class="line">        <span class="keyword">typedef</span> Mutex MutexType;<span class="comment">// 不用读写锁，因为每个fd的操作不会太频繁</span></span><br><span class="line">        <span class="keyword">struct</span> <span class="title class_">EventContext</span> &#123;</span><br><span class="line">            Scheduler* scheduler = <span class="literal">nullptr</span>; <span class="comment">//事件执行的scheduler</span></span><br><span class="line">            Fiber::ptr fiber;               <span class="comment">//事件协程</span></span><br><span class="line">            std::function&lt;<span class="type">void</span>()&gt; cb;       <span class="comment">//事件的回调函数</span></span><br><span class="line">        &#125;;</span><br><span class="line"></span><br><span class="line">        <span class="function">EventContext&amp; <span class="title">getContext</span><span class="params">(Event event)</span></span>;</span><br><span class="line">        <span class="function"><span class="type">void</span> <span class="title">resetContext</span><span class="params">(EventContext&amp; ctx)</span></span>;</span><br><span class="line">        <span class="function"><span class="type">void</span> <span class="title">triggerEvent</span><span class="params">(Event event)</span></span>;</span><br><span class="line"></span><br><span class="line">        EventContext read;      <span class="comment">//读事件</span></span><br><span class="line">        EventContext write;     <span class="comment">//写事件</span></span><br><span class="line">        <span class="type">int</span> fd = <span class="number">0</span>;             <span class="comment">//事件关联的句柄</span></span><br><span class="line">        Event events = NONE;    <span class="comment">//已经注册的事件</span></span><br><span class="line">        MutexType mutex;</span><br><span class="line">    &#125;;</span><br></pre></td></tr></table></figure>
 
 
+<h2 id="添加和删除事件"><a href="#添加和删除事件" class="headerlink" title="添加和删除事件"></a>添加和删除事件</h2><p>在IO协程调度模块中，添加和删除事件是通过<code>addEvent</code>和<code>delEvent</code>函数实现的。这两个函数用于注册和注销文件描述符上的读写事件。当协程调用阻塞函数时，例如<code>read</code>，我们会通过<code>addEvent</code>函数将该文件描述符的读事件注册到调度器中，并设置一个回调函数，当事件发生时切换回该协程继续执行。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//0 success, -1 error。 例如，fd=5， event=READ，则表示给fd=5注册读事件，cb是读事件发生时的回调函数</span></span><br><span class="line">    <span class="function"><span class="type">int</span> <span class="title">addEvent</span><span class="params">(<span class="type">int</span> fd, Event event, std::function&lt;<span class="type">void</span>()&gt; cb = <span class="literal">nullptr</span>)</span></span>;</span><br><span class="line">    <span class="function"><span class="type">bool</span> <span class="title">delEvent</span><span class="params">(<span class="type">int</span> fd, Event event)</span></span>;</span><br><span class="line">    <span class="function"><span class="type">bool</span> <span class="title">cancelEvent</span><span class="params">(<span class="type">int</span> fd, Event event)</span></span>;</span><br></pre></td></tr></table></figure>
+<p>例如，当fd&#x3D;5的socket发生读事件时，调度器会调用之前注册的回调函数，将控制权切换回对应的协程，从而实现协程级的阻塞和恢复。</p>
+<h2 id="重写idle"><a href="#重写idle" class="headerlink" title="重写idle"></a>重写idle</h2><p>在协程调度模块，每个线程的rootfiber都会执行<code>Scheduler::run()</code>函数。函数中有一个idle协程，当没有其他协程可执行时，执行idle协程。在Scheduler基类因为没有实现具体的IO调度逻辑，所以idle协程只是简单地休眠.</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> (no task) &#123;</span><br><span class="line">    <span class="built_in">idle</span>();</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<p><code>IOmanager</code>通过继承<code>Scheduler</code>类，重写了<code>idle</code>函数，实现了IO事件的等待和定时器的处理。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">while</span>(<span class="literal">true</span>)&#123;</span><br><span class="line">rt = <span class="built_in">epoll_wait</span>(m_epfd, events, <span class="number">64</span>, (<span class="type">int</span>)next_timeout); <span class="comment">// 如果tickle了，会监听到，并且swapout</span></span><br><span class="line"><span class="keyword">if</span> (rt &lt; <span class="number">0</span> &amp;&amp; errno == EINTR)&#123;&#125;</span><br><span class="line"><span class="keyword">else</span> <span class="keyword">break</span>; </span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">// 处理events里的事件</span></span><br></pre></td></tr></table></figure>
+<p>idle首先是调用epoll_wait监听已经注册的文件描述符上的事件，如果没有事件发生则继续等待。如果有事件产生才处理这些事件。<br>我们之前说fdContext里保存了每个fd的读写事件对应的协程和回调函数。那么当epoll_wait监听到某个fd上有事件发生时，我们就可以通过fdContext调用<code>triggerEvent</code>来将其对应的协程加入到调度器的任务队列中，等待调度执行。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> IOManager::FdContext::<span class="built_in">triggerEvent</span>(IOManager::Event event)</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="built_in">SYLAR_ASSERT</span>(events &amp; event);</span><br><span class="line">        events = (Event)(events &amp; ~event);</span><br><span class="line">        EventContext &amp;ctx = <span class="built_in">getContext</span>(event);</span><br><span class="line">        <span class="keyword">if</span> (ctx.cb)</span><br><span class="line">        &#123;</span><br><span class="line">            ctx.scheduler-&gt;<span class="built_in">schedule</span>(&amp;ctx.cb);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">else</span></span><br><span class="line">        &#123;</span><br><span class="line">            ctx.scheduler-&gt;<span class="built_in">schedule</span>(&amp;ctx.fiber);</span><br><span class="line">        &#125;</span><br><span class="line">        ctx.scheduler = <span class="literal">nullptr</span>;</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+<p>那么整个<code>IOmanager</code>的流程基本框架已经明了。对于每个线程的rootfiber来说，都会执行<code>Scheduler::run()</code>函数。在该函数中，如果没有其他协程可执行，就会调用<code>IOmanager::idle()</code>函数等待IO事件的发生。当有IO事件发生时，通过<code>FdContext::triggerEvent</code>将对应的协程加入调度器的任务队列中，等待调度执行。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">Scheduler（全局 1 个）</span><br><span class="line">│</span><br><span class="line">├── Thread 1  ── rootFiber₁ ── run()</span><br><span class="line">│                   ├─ 执行 A   </span><br><span class="line">│                   ├─ 执行 B   </span><br><span class="line">│                   └─ idle---- 如果监听到事件，加入到调度队列-----&gt;Scheduler</span><br><span class="line">│  &lt;----------------------------                           </span><br><span class="line">├── Thread 2  ── rootFiber₂ ── run()</span><br><span class="line">│                   ├─ 执行 C   </span><br><span class="line">│                   ├─ 执行 D   </span><br><span class="line">│                   └─ idle---- 如果监听到事件，加入到调度队列-----&gt;Scheduler</span><br><span class="line">│</span><br><span class="line">└── Thread 3  ── rootFiber₃ ── run()</span><br><span class="line">                    ├─ 执行 E   </span><br><span class="line">                    └─ idle---- 如果监听到事件，加入到调度队列-----&gt;Scheduler</span><br></pre></td></tr></table></figure>
 
+<h2 id="怎么防止一直idle"><a href="#怎么防止一直idle" class="headerlink" title="怎么防止一直idle"></a>怎么防止一直idle</h2><p>在idle中，如果没有 IO 事件，epoll_wait 会阻塞当前线程，使线程休眠等待。那么如果没有IO事件到达，idle就会一直抢占线程的使用权，不切换回<code>Scheduler::run()</code>函数，导致其他协程无法执行。我们<strong>需要某种手段，在有新的任务加入调度器时，能够唤醒idle协程，让调度器有机会去调度新的任务</strong>。</p>
+<p>sylar是通过管道通信来实现的。在<code>IOmanager</code>中，有一个管道的读写fd。当有新的任务加入调度器时，会向管道的写端写入数据，这个数据可以被epoll_wait监听到，从而唤醒idle协程，切换回调度器去调度新的任务。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="type">void</span> <span class="title">IOManager::tickle</span><span class="params">()</span></span></span><br><span class="line"><span class="function">    </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (<span class="built_in">hasIdleThreads</span>())</span><br><span class="line">        &#123;</span><br><span class="line">            <span class="keyword">return</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="type">int</span> rt = <span class="built_in">write</span>(m_tickleFds[<span class="number">1</span>], <span class="string">&quot;T&quot;</span>, <span class="number">1</span>); <span class="comment">// 写入一个T字节</span></span><br><span class="line">        <span class="built_in">SYLAR_ASSERT</span>(rt == <span class="number">1</span>);</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
 
-
-
-
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">新事件到达,向管道写数据</span><br><span class="line">   │</span><br><span class="line">   ▼</span><br><span class="line">  管道 --&gt; epoll_wait  ---&gt; idle被唤醒,切换回run ---&gt; 调度器调度新任务</span><br></pre></td></tr></table></figure>
+<h2 id="什么是惊群效应和如何解决"><a href="#什么是惊群效应和如何解决" class="headerlink" title="什么是惊群效应和如何解决"></a>什么是惊群效应和如何解决</h2><p>惊群效应是指多个线程或进程同时等待同一个事件时，当该事件发生时，所有等待的线程或进程都会被唤醒，争夺资源，导致大量的上下文切换和资源浪费。<br>如果我们这里一个Scheduler的任务到来，就tickle所有的线程，那么就会导致惊群效应。如何确保一次只唤醒一个线程？</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> (event.data.fd == m_tickleFds[<span class="number">0</span>])</span><br><span class="line">&#123;</span><br><span class="line">    <span class="type">uint8_t</span> dummy; <span class="comment">// 读取掉管道的数据. 但是不处理。</span></span><br><span class="line">    <span class="keyword">while</span> (<span class="built_in">read</span>(m_tickleFds[<span class="number">0</span>], &amp;dummy, <span class="number">1</span>) == <span class="number">1</span>)</span><br><span class="line">    ; <span class="comment">// 边缘触发要用while</span></span><br><span class="line">    <span class="keyword">continue</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在idle中，通过边缘触发和循环读取管道数据，确保每次只唤醒一个线程处理新任务，从而避免惊群效应的发生。</p>
 
       
 
@@ -268,7 +287,7 @@
     <a class="close js-modal-close" href="javascript:;"><i class="icon icon-close"></i></a>
     <p>扫一扫，分享到微信</p>
     <div class="wx-qrcode">
-      <img src="//pan.baidu.com/share/qrcode?url=https://evanliang6.github.io/2026/01/30/sylarhook%E9%98%BB%E5%A1%9E/" alt="微信分享二维码">
+      <img src="//pan.baidu.com/share/qrcode?url=https://evanliang6.github.io/2026/01/30/sylariom/" alt="微信分享二维码">
     </div>
 </div>
 
@@ -282,18 +301,9 @@
   
 <nav id="article-nav">
   
-    <a href="/2026/01/30/sylar%E5%8D%8F%E7%A8%8B%E8%B0%83%E5%BA%A6/" id="article-nav-newer" class="article-nav-link-wrap">
-      <i class="icon-circle-left"></i>
-      <div class="article-nav-title">
-        
-          sylar笔记(一) 协程调度
-        
-      </div>
-    </a>
   
-  
-    <a href="/2026/01/30/%E7%A4%BE%E4%BC%9A%E6%80%A7%E5%8A%A8%E7%89%A94/" id="article-nav-older" class="article-nav-link-wrap">
-      <div class="article-nav-title">社会性动物读书笔记(四) 大众传播、宣传与说服</div>
+    <a href="/2026/01/30/sylar%E5%8D%8F%E7%A8%8B%E8%B0%83%E5%BA%A6/" id="article-nav-older" class="article-nav-link-wrap">
+      <div class="article-nav-title">sylar笔记(一) 协程调度</div>
       <i class="icon-circle-right"></i>
     </a>
   
