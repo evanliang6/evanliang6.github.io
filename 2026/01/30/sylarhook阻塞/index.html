@@ -6,17 +6,17 @@
   <meta name="renderer" content="webkit">
   <meta http-equiv="X-UA-Compatible" content="IE=edge" >
   <link rel="dns-prefetch" href="https://evanliang6.github.io">
-  <title>sylar笔记(三) hook阻塞函数实现协程级阻塞 | evan&#39;s blog</title>
+  <title>sylar笔记() hook阻塞函数实现协程级阻塞 | evan&#39;s blog</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
   <meta name="description" content="在socket编程中，阻塞函数会导致整个线程等待操作完成，从而无法处理其他任务。首先，对于单线程的应用程序，例如redis，这么做的话会导致阻塞整个进程，无法完成其他请求。对于多线程的应用程序，例如web服务器，虽然其他线程可以继续工作，但线程的创建和切换开销较大，且线程数目有限，无法充分利用系统资源。为了实现协程级的阻塞，我们可以使用hook技术，将阻塞函数替换为非阻塞版本，并在协程调度器中管理">
 <meta property="og:type" content="article">
-<meta property="og:title" content="sylar笔记(三) hook阻塞函数实现协程级阻塞">
+<meta property="og:title" content="sylar笔记() hook阻塞函数实现协程级阻塞">
 <meta property="og:url" content="https://evanliang6.github.io/2026/01/30/sylarhook%E9%98%BB%E5%A1%9E/index.html">
 <meta property="og:site_name" content="evan&#39;s blog">
 <meta property="og:description" content="在socket编程中，阻塞函数会导致整个线程等待操作完成，从而无法处理其他任务。首先，对于单线程的应用程序，例如redis，这么做的话会导致阻塞整个进程，无法完成其他请求。对于多线程的应用程序，例如web服务器，虽然其他线程可以继续工作，但线程的创建和切换开销较大，且线程数目有限，无法充分利用系统资源。为了实现协程级的阻塞，我们可以使用hook技术，将阻塞函数替换为非阻塞版本，并在协程调度器中管理">
 <meta property="og:locale">
 <meta property="article:published_time" content="2026-01-30T04:41:25.836Z">
-<meta property="article:modified_time" content="2026-01-31T13:27:08.336Z">
+<meta property="article:modified_time" content="2026-01-31T17:55:20.194Z">
 <meta property="article:author" content="Liang Yifan">
 <meta property="article:tag" content="Liang Yifan">
 <meta name="twitter:card" content="summary">
@@ -166,7 +166,7 @@
         
   
     <h1 class="article-title" itemprop="name">
-      sylar笔记(三) hook阻塞函数实现协程级阻塞
+      sylar笔记() hook阻塞函数实现协程级阻塞
     </h1>
   
 
