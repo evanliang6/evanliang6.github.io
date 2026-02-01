@@ -159,6 +159,71 @@
           <div id="js-content" class="content-ll">
             
   
+    <article id="post-skiplist" class="article article-type-post  article-index" itemscope itemprop="blogPost">
+  <div class="article-inner">
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2026/01/28/skiplist/">从零实现redis(一) 跳表(skiplist)</a>
+    </h1>
+  
+
+        
+        <a href="/2026/01/28/skiplist/" class="archive-article-date">
+  	<time datetime="2026-01-28T12:48:03.054Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2026-01-28</time>
+</a>
+        
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h2 id="跳表是什么"><a href="#跳表是什么" class="headerlink" title="跳表是什么"></a>跳表是什么</h2><p>跳表是在传统链表的基础上进行了一些改进的数据结构。传统链表在查询数据时复杂度为O(n), 而跳表通过添加多级索引的方式可以把复杂度降到O(log n)。本质上是用空间换取时间。如图所示。<br>redis内部使用跳表来存储KV数据中的有序集合(sorted set)，跳表的实现相对简单且高效，适合在内存中存储和操作有序数据。</p>
+        
+          <a class="article-more-a" href="/2026/01/28/skiplist/#more">more >></a>
+        
+      
+
+      
+    </div>
+    <div class="article-info article-info-index">
+      
+      
+      
+
+      
+        <p class="article-more-link">
+          <a class="article-more-a" href="/2026/01/28/skiplist/">展开全文 >></a>
+        </p>
+      
+
+      
+      <div class="clearfix"></div>
+    </div>
+  </div>
+</article>
+
+<aside class="wrap-side-operation">
+    <div class="mod-side-operation">
+        
+        <div class="jump-container" id="js-jump-container" style="display:none;">
+            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
+                <i class="icon-font icon-back"></i>
+            </a>
+            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
+                <i class="icon-font icon-plane jump-plane"></i>
+            </div>
+        </div>
+        
+        
+    </div>
+</aside>
+
+
+
+
+  
     <article id="post-C++11 杂项随笔" class="article article-type-post  article-index" itemscope itemprop="blogPost">
   <div class="article-inner">
     

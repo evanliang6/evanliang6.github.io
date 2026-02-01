@@ -15,13 +15,13 @@
 <meta property="og:site_name" content="evan&#39;s blog">
 <meta property="og:description" content="封装address提供网络地址相关的类，支持与网络地址相关的操作，一共有以下几个类： Address：所有网络地址的基类，抽象类，对应sockaddr类型，但只包含抽象方法，不包含具体的成员。除此外，Address作为地址类还提供了网络地址查询及网卡地址查询功能。 IPAddress：IP地址的基类，抽象类，在Address基础上，增加了IP地址相关的端口以及子网掩码、广播地址、网段地址操作，同样">
 <meta property="og:locale">
-<meta property="og:image" content="https://evanliang6.github.io/image-7.png">
+<meta property="og:image" content="https://evanliang6.github.io/images/image-7.png">
 <meta property="article:published_time" content="2026-02-01T07:03:08.588Z">
-<meta property="article:modified_time" content="2026-02-01T09:37:38.991Z">
+<meta property="article:modified_time" content="2026-02-01T12:52:14.460Z">
 <meta property="article:author" content="Liang Yifan">
 <meta property="article:tag" content="Liang Yifan">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://evanliang6.github.io/image-7.png">
+<meta name="twitter:image" content="https://evanliang6.github.io/images/image-7.png">
   
     <link rel="alternative" href="/atom.xml" title="evan&#39;s blog" type="application/atom+xml">
   
@@ -190,7 +190,7 @@
 <p><code>UnknownAddress</code>：表示一个未知类型的套接字地址，实体类，对应sockaddr类型，这个类型与Address类型的区别是它包含一个sockaddr成员，并且是一个实体类。</p>
 <span id="more"></span>
 
-<p><img src="/image-7.png" alt="alt text"></p>
+<p><img src="/images/image-7.png" alt="alt text"></p>
 <h2 id="Sockaddr"><a href="#Sockaddr" class="headerlink" title="Sockaddr"></a>Sockaddr</h2><figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">struct</span> <span class="title class_">sockaddr</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="type">unsigned</span> <span class="type">short</span> sa_family; <span class="comment">// 地址族 AF_INET / AF_INET6 / AF_UNIX ...</span></span><br><span class="line">    <span class="type">char</span> sa_data[<span class="number">14</span>];         <span class="comment">// 真实地址数据（按不同协议解释）</span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
 <p>sockaddr 是“通用基类”. 所有的具体地址都可以替换成sockaddr类型，但是不同的协议有不同的具体实现，例如IPv4使用sockaddr_in,IPv6使用sockaddr_in6,Unix域套接字使用sockaddr_un。</p>
 <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">struct</span> <span class="title class_">sockaddr_in</span> &#123;</span><br><span class="line">    <span class="type">short</span> sin_family;   <span class="comment">// 2</span></span><br><span class="line">    <span class="type">unsigned</span> <span class="type">short</span> sin_port; <span class="comment">// 2</span></span><br><span class="line">    <span class="keyword">struct</span> <span class="title class_">in_addr</span> sin_addr; <span class="comment">// 4</span></span><br><span class="line">    <span class="type">char</span> sin_zero[<span class="number">8</span>];        <span class="comment">// 8</span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
@@ -317,6 +317,15 @@
 
   
 <nav id="article-nav">
+  
+    <a href="/2026/02/01/sylarbta/" id="article-nav-newer" class="article-nav-link-wrap">
+      <i class="icon-circle-left"></i>
+      <div class="article-nav-title">
+        
+          sylar笔记(六) 封装bytearray
+        
+      </div>
+    </a>
   
   
     <a href="/2026/02/01/sylartimer/" id="article-nav-older" class="article-nav-link-wrap">
