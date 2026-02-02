@@ -6,18 +6,22 @@
   <meta name="renderer" content="webkit">
   <meta http-equiv="X-UA-Compatible" content="IE=edge" >
   <link rel="dns-prefetch" href="https://evanliang6.github.io">
-  <title>evan&#39;s blog</title>
+  <title>sylar笔记(七) 封装HTTP服务器和客户端 | evan&#39;s blog</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <meta name="description" content="blog">
-<meta property="og:type" content="website">
-<meta property="og:title" content="evan&#39;s blog">
-<meta property="og:url" content="https://evanliang6.github.io/index.html">
+  <meta name="description" content="Http服务器是直接继承TCPserver实现的。因为Http协议就是基于TCP协议之上的。只是Http协议有了自己的一套报文格式和处理方式而已。在Tcp服务器中，我们可以发送任何数据。而Http协议正是对于这些数据做了规范化的处理。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="sylar笔记(七) 封装HTTP服务器和客户端">
+<meta property="og:url" content="https://evanliang6.github.io/2026/02/02/sylarhttp/index.html">
 <meta property="og:site_name" content="evan&#39;s blog">
-<meta property="og:description" content="blog">
+<meta property="og:description" content="Http服务器是直接继承TCPserver实现的。因为Http协议就是基于TCP协议之上的。只是Http协议有了自己的一套报文格式和处理方式而已。在Tcp服务器中，我们可以发送任何数据。而Http协议正是对于这些数据做了规范化的处理。">
 <meta property="og:locale">
+<meta property="og:image" content="https://evanliang6.github.io/images/image-10.png">
+<meta property="article:published_time" content="2026-02-01T16:52:39.245Z">
+<meta property="article:modified_time" content="2026-02-02T06:09:36.015Z">
 <meta property="article:author" content="Liang Yifan">
 <meta property="article:tag" content="Liang Yifan">
 <meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://evanliang6.github.io/images/image-10.png">
   
     <link rel="alternative" href="/atom.xml" title="evan&#39;s blog" type="application/atom+xml">
   
@@ -157,16 +161,14 @@
             <canvas data-colors="#eaeaea" data-sectionHeight="100" data-contentId="js-content" id="myCanvas1" class="anm-canvas"></canvas>
           </div>
           <div id="js-content" class="content-ll">
-            
-  
-    <article id="post-sylarhttp" class="article article-type-post  article-index" itemscope itemprop="blogPost">
+            <article id="post-sylarhttp" class="article article-type-post " itemscope itemprop="blogPost">
   <div class="article-inner">
     
       <header class="article-header">
         
   
-    <h1 itemprop="name">
-      <a class="article-title" href="/2026/02/02/sylarhttp/">sylar笔记(七) 封装HTTP服务器和客户端</a>
+    <h1 class="article-title" itemprop="name">
+      sylar笔记(七) 封装HTTP服务器和客户端
     </h1>
   
 
@@ -180,11 +182,54 @@
     <div class="article-entry" itemprop="articleBody">
       
         <p>Http服务器是直接继承TCPserver实现的。因为Http协议就是基于TCP协议之上的。只是Http协议有了自己的一套报文格式和处理方式而已。在Tcp服务器中，我们可以发送任何数据。而Http协议正是对于这些数据做了规范化的处理。</p>
-        
-          <a class="article-more-a" href="/2026/02/02/sylarhttp/#more">more >></a>
-        
+<span id="more"></span>
+
+<h2 id="先封装Http请求和响应"><a href="#先封装Http请求和响应" class="headerlink" title="先封装Http请求和响应"></a>先封装Http请求和响应</h2><p>对于HTTP请求，需要关注HTTP方法，请求路径和参数，HTTP版本，HTTP头部的key-value结构，Cookies，以及HTTP Body内容。Maptype是一个string到string,不区分大小写的map。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">HttpMethod m_method;<span class="comment">//GET POST DELETE PUT </span></span><br><span class="line"><span class="type">uint8_t</span> m_version;<span class="comment">// HTTP/1.0 HTTP/1.1 HTTP/2.0</span></span><br><span class="line"><span class="type">bool</span> m_close;<span class="comment">// 是否是长连接</span></span><br><span class="line"></span><br><span class="line">std::string m_path;<span class="comment">// 请求路径</span></span><br><span class="line">std::string m_query;<span class="comment">// 请求参数</span></span><br><span class="line">std::string m_fragment;<span class="comment">// 片段。一般是前端展示用，不会发送到服务器</span></span><br><span class="line">std::string m_body;<span class="comment">// 请求body</span></span><br><span class="line"></span><br><span class="line">MapType m_headers;<span class="comment">// key-value结构的请求头</span></span><br><span class="line">MapType m_params;<span class="comment">// key-value结构的请求参数</span></span><br><span class="line">MapType m_cookies;<span class="comment">// key-value结构的cookies</span></span><br></pre></td></tr></table></figure>
+
+<p>对于HTTP响应，需要关注HTTP版本，响应状态码，响应字符串，响应头部的key-value结构，以及响应的Body内容. m_reason是响应状态字符串，比如200对应的OK，404对应的Not Found等。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">HttpStatus m_status;</span><br><span class="line"><span class="type">uint8_t</span> m_version;</span><br><span class="line"><span class="type">bool</span> m_close;</span><br><span class="line">std::string m_body;</span><br><span class="line">std::string m_reason;<span class="comment">// 响应状态字符串</span></span><br><span class="line">MapType m_headers;</span><br></pre></td></tr></table></figure>
+
+<p>HttpParser是Http请求和响应的解析器，支持对请求和响应的解析。其本质是一个状态机。可以通过调用成员函数来判断是否已经处理完成, 并且通过回调函数onMessageCb将解析好的Http请求或者响应对象返回出去。<code>http_parser_execute</code>将数据传入解析器进行处理，并且返回已经处理的数据长度。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="type">int</span> <span class="title">http_parser_init</span><span class="params">(http_parser *parser)</span></span>;</span><br><span class="line"><span class="function"><span class="type">int</span> <span class="title">http_parser_finish</span><span class="params">(http_parser *parser)</span></span>;</span><br><span class="line"><span class="function"><span class="type">size_t</span> <span class="title">http_parser_execute</span><span class="params">(http_parser *parser, <span class="type">const</span> <span class="type">char</span> *data, <span class="type">size_t</span> len, <span class="type">size_t</span> off)</span></span>;</span><br><span class="line"><span class="function"><span class="type">int</span> <span class="title">http_parser_has_error</span><span class="params">(http_parser *parser)</span></span>;</span><br><span class="line"><span class="function"><span class="type">int</span> <span class="title">http_parser_is_finished</span><span class="params">(http_parser *parser)</span></span>;</span><br></pre></td></tr></table></figure>
+
+<h2 id="封装session"><a href="#封装session" class="headerlink" title="封装session"></a>封装session</h2><p>HttpSession是对TCP Socket的进一步封装。每一个HTTP Session对应一个TCP连接。所以它继承了SocketStream. 提供了接收Http请求和发送Http响应的接口。通过调用SocketStream的读写接口，结合HttpParser和HttpRequest&#x2F;HttpResponse对象，实现了对HTTP请求和响应的处理。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">HttpSession</span> : <span class="keyword">public</span> SocketStream &#123;</span><br><span class="line"><span class="keyword">public</span>:</span><br><span class="line">    <span class="keyword">typedef</span> std::shared_ptr&lt;HttpSession&gt; ptr;</span><br><span class="line">    <span class="built_in">HttpSession</span>(Socket::ptr sock, <span class="type">bool</span> owner = <span class="literal">true</span>);</span><br><span class="line">    <span class="function">HttpRequest::ptr <span class="title">recvRequest</span><span class="params">()</span></span>;</span><br><span class="line">    <span class="function"><span class="type">int</span> <span class="title">sendResponse</span><span class="params">(HttpResponse::ptr rsp)</span></span>;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p><img src="/images/image-10.png" alt="alt text"></p>
+<h2 id="封装http服务器"><a href="#封装http服务器" class="headerlink" title="封装http服务器"></a>封装http服务器</h2><p>HttpServer继承自TcpServer，重写了handleClient函数。每当有新的TCP连接建立时，都会调用handleClient函数。该函数会创建一个HttpSession对象，并且通过回调函数将HttpSession对象传递出去。用户可以在回调函数中处理Http请求和响应。<br>回调函数的内容是：调用session的recvRequest函数接收Http请求，处理请求后，调用sendResponse函数发送Http响应。如果是长连接，则继续等待下一个请求，否则关闭连接。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="type">void</span> <span class="title">HttpServer::handleClient</span><span class="params">(Socket::ptr client)</span></span>&#123;</span><br><span class="line">    <span class="built_in">SYLAR_LOG_DEBUG</span>(g_logger) &lt;&lt; <span class="string">&quot;handleClient &quot;</span> &lt;&lt; *client;</span><br><span class="line">    <span class="function">HttpSession::ptr <span class="title">session</span><span class="params">(<span class="keyword">new</span> HttpSession(client))</span></span>;</span><br><span class="line">    <span class="keyword">do</span>&#123;</span><br><span class="line">        <span class="keyword">auto</span> req = session-&gt;<span class="built_in">recvRequest</span>();</span><br><span class="line">        <span class="keyword">if</span>(!req)&#123;</span><br><span class="line">            <span class="built_in">SYLAR_LOG_DEBUG</span>(g_logger) &lt;&lt; <span class="string">&quot;recv http request fail, errno=&quot;</span></span><br><span class="line">                &lt;&lt; errno &lt;&lt; <span class="string">&quot; errstr=&quot;</span> &lt;&lt; <span class="built_in">strerror</span>(errno)</span><br><span class="line">                &lt;&lt; <span class="string">&quot; client:&quot;</span> &lt;&lt; *client&lt;&lt; <span class="string">&quot; keep_alive=&quot;</span> &lt;&lt; m_isKeepalive;</span><br><span class="line">            <span class="keyword">break</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="function">HttpResponse::ptr <span class="title">rsp</span><span class="params">(<span class="keyword">new</span> HttpResponse(req-&gt;getVersion()</span></span></span><br><span class="line"><span class="params"><span class="function">        ,req-&gt;isClose() || !m_isKeepalive))</span></span>;</span><br><span class="line"></span><br><span class="line">        m_dispatch-&gt;<span class="built_in">handle</span>(req,rsp,session);</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">        session-&gt;<span class="built_in">sendResponse</span>(rsp);</span><br><span class="line">        <span class="keyword">if</span>(!m_isKeepalive || req-&gt;<span class="built_in">isClose</span>()) &#123;</span><br><span class="line">            <span class="keyword">break</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; <span class="keyword">while</span>(<span class="literal">true</span>);</span><br><span class="line">    session-&gt;<span class="built_in">close</span>();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="Servletdispatch处理http请求"><a href="#Servletdispatch处理http请求" class="headerlink" title="Servletdispatch处理http请求"></a>Servletdispatch处理http请求</h2><p>但是我们一个服务器往往应该支持<strong>不同的处理方式，不同的url对应不同的处理逻辑</strong>。所以这里引入了ServletDispatch来处理不同的请求路径。<br>这里的servlet和spring框架中的servlet类似。都是用来处理http请求的。ServletDispatch维护了一个servlet的映射表，根据请求的路径选择合适的servlet来处理请求。同时请求路径支持通配符匹配。比如<code>/sylar/*</code>可以匹配<code>/sylar/test</code>和<code>/sylar/abc</code>等路径。当没有任何servlet匹配时，会调用默认的servlet来处理请求。</p>
+<p>Servlet是一个抽象类有一个handle方法，如果functionservlet继承自servlet，可以将一个函数对象作为回调函数传入，当请求到达时，调用该函数对象来处理请求。后续如果有新的处理方法，例如文件servlet，可以继承自servlet类，实现handle方法来处理请求。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">Servlet</span>&#123;</span><br><span class="line">    <span class="keyword">public</span>:</span><br><span class="line">    <span class="keyword">typedef</span> std::shared_ptr&lt;Servlet&gt; ptr;</span><br><span class="line">    <span class="built_in">Servlet</span>(<span class="type">const</span> std::string&amp; name)</span><br><span class="line">    :<span class="built_in">m_name</span>(name) &#123;&#125;</span><br><span class="line">    <span class="keyword">virtual</span> ~<span class="built_in">Servlet</span>()&#123;&#125;;</span><br><span class="line">    <span class="function"><span class="keyword">virtual</span> <span class="type">int32_t</span> <span class="title">handle</span><span class="params">(sylar::http::HttpRequest::ptr request</span></span></span><br><span class="line"><span class="params"><span class="function">                   , sylar::http::HttpResponse::ptr response</span></span></span><br><span class="line"><span class="params"><span class="function">                   , sylar::http::HttpSession::ptr session)</span> </span>= <span class="number">0</span>;</span><br><span class="line">    <span class="function"><span class="type">const</span> std::string <span class="title">getName</span><span class="params">()</span> <span class="type">const</span> </span>&#123; <span class="keyword">return</span> m_name;&#125;</span><br><span class="line">    <span class="keyword">protected</span>:</span><br><span class="line">    std::string m_name;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">FunctionServlet</span> : <span class="keyword">public</span> Servlet &#123;</span><br><span class="line"><span class="keyword">public</span>:</span><br><span class="line">    <span class="keyword">typedef</span> std::shared_ptr&lt;FunctionServlet&gt; ptr;</span><br><span class="line">    <span class="keyword">typedef</span> std::function&lt;<span class="type">int32_t</span> (sylar::http::HttpRequest::ptr request</span><br><span class="line">                   , sylar::http::HttpResponse::ptr response</span><br><span class="line">                   , sylar::http::HttpSession::ptr session)&gt; callback;</span><br><span class="line">    <span class="built_in">FunctionServlet</span>(callback cb);</span><br><span class="line">    <span class="function"><span class="keyword">virtual</span> <span class="type">int32_t</span> <span class="title">handle</span><span class="params">(sylar::http::HttpRequest::ptr request</span></span></span><br><span class="line"><span class="params"><span class="function">                   , sylar::http::HttpResponse::ptr response</span></span></span><br><span class="line"><span class="params"><span class="function">                   , sylar::http::HttpSession::ptr session)</span> <span class="keyword">override</span></span>;</span><br><span class="line"><span class="keyword">private</span>:</span><br><span class="line">    callback m_cb;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">ServletDispatch</span>: <span class="keyword">public</span> Servlet&#123;</span><br><span class="line"><span class="keyword">public</span>:</span><br><span class="line">    <span class="keyword">typedef</span> std::shared_ptr&lt;ServletDispatch&gt; ptr;</span><br><span class="line">    <span class="keyword">typedef</span> RWMutex RWMutexType;</span><br><span class="line"></span><br><span class="line">    <span class="built_in">ServletDispatch</span>();</span><br><span class="line">    <span class="function"><span class="keyword">virtual</span> <span class="type">int32_t</span> <span class="title">handle</span><span class="params">(sylar::http::HttpRequest::ptr request</span></span></span><br><span class="line"><span class="params"><span class="function">                   , sylar::http::HttpResponse::ptr response</span></span></span><br><span class="line"><span class="params"><span class="function">                   , sylar::http::HttpSession::ptr session)</span> <span class="keyword">override</span></span>;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="type">void</span> <span class="title">addServlet</span><span class="params">(<span class="type">const</span> std::string&amp; uri,Servlet::ptr slt)</span></span>;</span><br><span class="line">    <span class="function"><span class="type">void</span> <span class="title">addServlet</span><span class="params">(<span class="type">const</span> std::string&amp; uri, FunctionServlet::callback cb)</span></span>;</span><br><span class="line">    <span class="function"><span class="type">void</span> <span class="title">addGlobServlet</span><span class="params">(<span class="type">const</span> std::string&amp; uri,Servlet::ptr slt)</span></span>;</span><br><span class="line">    <span class="function"><span class="type">void</span> <span class="title">addGlobServlet</span><span class="params">(<span class="type">const</span> std::string&amp; uri, FunctionServlet::callback cb)</span></span>;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="type">void</span> <span class="title">delServlet</span><span class="params">(<span class="type">const</span> std::string&amp; uri)</span></span>;</span><br><span class="line">    <span class="function"><span class="type">void</span> <span class="title">delGlobServlet</span><span class="params">(<span class="type">const</span> std::string&amp; uri)</span></span>;</span><br><span class="line">    <span class="function">Servlet::ptr <span class="title">getServlet</span><span class="params">(<span class="type">const</span> std::string&amp; uri)</span></span>;</span><br><span class="line">    <span class="function">Servlet::ptr <span class="title">getGlobServlet</span><span class="params">(<span class="type">const</span> std::string&amp; uri)</span></span>;</span><br><span class="line">    <span class="function">Servlet::ptr <span class="title">getDefault</span><span class="params">()</span> <span class="type">const</span> </span>&#123; <span class="keyword">return</span> m_default;&#125;</span><br><span class="line">    <span class="function"><span class="type">void</span> <span class="title">setDefault</span><span class="params">(Servlet::ptr v)</span> </span>&#123; m_default = v;&#125;</span><br><span class="line">    <span class="function">Servlet::ptr <span class="title">getMatchedServlet</span><span class="params">(<span class="type">const</span> std::string&amp; uri)</span></span>;</span><br><span class="line"><span class="keyword">private</span>:</span><br><span class="line">    RWMutexType m_mutex;</span><br><span class="line">    <span class="comment">// uri-&gt;servlet 映射</span></span><br><span class="line">    std::unordered_map&lt;std::string,Servlet::ptr&gt; m_datas;</span><br><span class="line">    std::vector&lt;std::pair&lt;std::string,Servlet::ptr&gt;&gt; m_globs;</span><br><span class="line">    Servlet::ptr m_default;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">NotFoundServlet</span> : <span class="keyword">public</span> Servlet &#123;</span><br><span class="line"><span class="keyword">public</span>:</span><br><span class="line">    <span class="keyword">typedef</span> std::shared_ptr&lt;NotFoundServlet&gt; ptr;</span><br><span class="line">    <span class="built_in">NotFoundServlet</span>();</span><br><span class="line">    <span class="function"><span class="keyword">virtual</span> <span class="type">int32_t</span> <span class="title">handle</span><span class="params">(sylar::http::HttpRequest::ptr request</span></span></span><br><span class="line"><span class="params"><span class="function">                   , sylar::http::HttpResponse::ptr response</span></span></span><br><span class="line"><span class="params"><span class="function">                   , sylar::http::HttpSession::ptr session)</span> <span class="keyword">override</span></span>;</span><br><span class="line"></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<h2 id="keep-alive长连接"><a href="#keep-alive长连接" class="headerlink" title="keep-alive长连接"></a>keep-alive长连接</h2><p>http1.0默认是短连接，每次请求响应完成后，连接就会关闭。如果需要保持连接，需要在头部添加<code>Connection: keep-alive</code>字段。http1.1默认是长连接，如果需要关闭连接，需要在头部添加<code>Connection: close</code>字段。在HttpRequest和HttpResponse类中，都有isClose函数来判断是否是长连接。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">do</span>&#123;</span><br><span class="line">        <span class="keyword">auto</span> req = session-&gt;<span class="built_in">recvRequest</span>();</span><br><span class="line">        <span class="keyword">if</span>(!req)&#123;</span><br><span class="line">            <span class="built_in">SYLAR_LOG_DEBUG</span>(g_logger) &lt;&lt; <span class="string">&quot;recv http request fail, errno=&quot;</span></span><br><span class="line">                &lt;&lt; errno &lt;&lt; <span class="string">&quot; errstr=&quot;</span> &lt;&lt; <span class="built_in">strerror</span>(errno)</span><br><span class="line">                &lt;&lt; <span class="string">&quot; client:&quot;</span> &lt;&lt; *client&lt;&lt; <span class="string">&quot; keep_alive=&quot;</span> &lt;&lt; m_isKeepalive;</span><br><span class="line">            <span class="keyword">break</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="function">HttpResponse::ptr <span class="title">rsp</span><span class="params">(<span class="keyword">new</span> HttpResponse(req-&gt;getVersion()</span></span></span><br><span class="line"><span class="params"><span class="function">        ,req-&gt;isClose() || !m_isKeepalive))</span></span>;</span><br><span class="line"></span><br><span class="line">        m_dispatch-&gt;<span class="built_in">handle</span>(req,rsp,session);</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">        session-&gt;<span class="built_in">sendResponse</span>(rsp);</span><br><span class="line">        <span class="keyword">if</span>(!m_isKeepalive || req-&gt;<span class="built_in">isClose</span>()) &#123;</span><br><span class="line">            <span class="keyword">break</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; <span class="keyword">while</span>(<span class="literal">true</span>);</span><br></pre></td></tr></table></figure>
+<p>在httpserver中，如果是短连接，处理完请求后就关闭连接，这个协程就结束了。如果需要继续发送，需要重新建立连接。<br>如果是长连接，则继续等待下一个请求。</p>
+
       
 
+      
+        <div class="page-reward">
+          <a href="javascript:;" class="page-reward-btn tooltip-top">
+            <div class="tooltip tooltip-east">
+            <span class="tooltip-item">
+              赏
+            </span>
+            <span class="tooltip-content">
+              <span class="tooltip-text">
+                <span class="tooltip-inner">
+                  <p class="reward-p"><i class="icon icon-quo-left"></i>谢谢你请我吃糖果<i class="icon icon-quo-right"></i></p>
+                  <div class="reward-box">
+                    
+                    
+                  </div>
+                </span>
+              </span>
+            </span>
+          </div>
+          </a>
+        </div>
       
     </div>
     <div class="article-info article-info-index">
@@ -193,16 +238,75 @@
       
 
       
-        <p class="article-more-link">
-          <a class="article-more-a" href="/2026/02/02/sylarhttp/">展开全文 >></a>
-        </p>
-      
 
+      
+        
+<div class="share-btn share-icons tooltip-left">
+  <div class="tooltip tooltip-east">
+    <span class="tooltip-item">
+      <a href="javascript:;" class="share-sns share-outer">
+        <i class="icon icon-share"></i>
+      </a>
+    </span>
+    <span class="tooltip-content">
+      <div class="share-wrap">
+        <div class="share-icons">
+          <a class="weibo share-sns" href="javascript:;" data-type="weibo">
+            <i class="icon icon-weibo"></i>
+          </a>
+          <a class="weixin share-sns wxFab" href="javascript:;" data-type="weixin">
+            <i class="icon icon-weixin"></i>
+          </a>
+          <a class="qq share-sns" href="javascript:;" data-type="qq">
+            <i class="icon icon-qq"></i>
+          </a>
+          <a class="douban share-sns" href="javascript:;" data-type="douban">
+            <i class="icon icon-douban"></i>
+          </a>
+          <a class="qzone share-sns" href="javascript:;" data-type="qzone">
+            <i class="icon icon-qzone"></i>
+          </a>
+          <a class="facebook share-sns" href="javascript:;" data-type="facebook">
+            <i class="icon icon-facebook"></i>
+          </a>
+          <a class="twitter share-sns" href="javascript:;" data-type="twitter">
+            <i class="icon icon-twitter"></i>
+          </a>
+          <a class="google share-sns" href="javascript:;" data-type="google">
+            <i class="icon icon-google"></i>
+          </a>
+        </div>
+      </div>
+    </span>
+  </div>
+</div>
+
+<div class="page-modal wx-share js-wx-box">
+    <a class="close js-modal-close" href="javascript:;"><i class="icon icon-close"></i></a>
+    <p>扫一扫，分享到微信</p>
+    <div class="wx-qrcode">
+      <img src="//pan.baidu.com/share/qrcode?url=https://evanliang6.github.io/2026/02/02/sylarhttp/" alt="微信分享二维码">
+    </div>
+</div>
+
+<div class="mask js-mask"></div>
       
       <div class="clearfix"></div>
     </div>
   </div>
 </article>
+
+  
+<nav id="article-nav">
+  
+  
+    <a href="/2026/02/01/sylartcpserv/" id="article-nav-older" class="article-nav-link-wrap">
+      <div class="article-nav-title">sylar笔记(七) 封装TCP服务器</div>
+      <i class="icon-circle-right"></i>
+    </a>
+  
+</nav>
+
 
 <aside class="wrap-side-operation">
     <div class="mod-side-operation">
@@ -222,608 +326,14 @@
 
 
 
-
-  
-    <article id="post-sylartcpserv" class="article article-type-post  article-index" itemscope itemprop="blogPost">
-  <div class="article-inner">
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/2026/02/01/sylartcpserv/">sylar笔记(七) 封装TCP服务器</a>
-    </h1>
-  
-
-        
-        <a href="/2026/02/01/sylartcpserv/" class="archive-article-date">
-  	<time datetime="2026-02-01T13:09:28.610Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2026-02-01</time>
-</a>
-        
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <p>虽然我们针对Socket做了封装，但是直接使用Socket来进行网络编程还是比较麻烦的。我们需要封装一个TCP服务器，来简化网络编程的复杂度。这个tcpserver有点类似于其他代码里的eventloop+acceptor。</p>
-        
-          <a class="article-more-a" href="/2026/02/01/sylartcpserv/#more">more >></a>
-        
-      
-
-      
-    </div>
-    <div class="article-info article-info-index">
-      
-      
-      
-
-      
-        <p class="article-more-link">
-          <a class="article-more-a" href="/2026/02/01/sylartcpserv/">展开全文 >></a>
-        </p>
-      
-
-      
-      <div class="clearfix"></div>
-    </div>
-  </div>
-</article>
-
-<aside class="wrap-side-operation">
-    <div class="mod-side-operation">
-        
-        <div class="jump-container" id="js-jump-container" style="display:none;">
-            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
-                <i class="icon-font icon-back"></i>
-            </a>
-            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
-                <i class="icon-font icon-plane jump-plane"></i>
-            </div>
-        </div>
-        
-        
-    </div>
-</aside>
-
-
-
-
-  
-    <article id="post-sylarbta" class="article article-type-post  article-index" itemscope itemprop="blogPost">
-  <div class="article-inner">
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/2026/02/01/sylarbta/">sylar笔记(六) 封装bytearray</a>
-    </h1>
-  
-
-        
-        <a href="/2026/02/01/sylarbta/" class="archive-article-date">
-  	<time datetime="2026-02-01T09:40:30.761Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2026-02-01</time>
-</a>
-        
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <p>字节数组容器，提供基础类型的序列化与反序列化功能。</p>
-<p>ByteArray的底层存储是固定大小的块，以链表形式组织。每次写入数据时，将数据写入到链表最后一个块中，如果最后一个块不足以容纳数据，则分配一个新的块并添加到链表结尾，再写入数据。ByteArray会记录当前的操作位置，每次写入数据时，该操作位置按写入大小往后偏移，如果要读取数据，则必须调用setPosition重新设置当前的操作位置。</p>
-        
-          <a class="article-more-a" href="/2026/02/01/sylarbta/#more">more >></a>
-        
-      
-
-      
-    </div>
-    <div class="article-info article-info-index">
-      
-      
-      
-
-      
-        <p class="article-more-link">
-          <a class="article-more-a" href="/2026/02/01/sylarbta/">展开全文 >></a>
-        </p>
-      
-
-      
-      <div class="clearfix"></div>
-    </div>
-  </div>
-</article>
-
-<aside class="wrap-side-operation">
-    <div class="mod-side-operation">
-        
-        <div class="jump-container" id="js-jump-container" style="display:none;">
-            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
-                <i class="icon-font icon-back"></i>
-            </a>
-            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
-                <i class="icon-font icon-plane jump-plane"></i>
-            </div>
-        </div>
-        
-        
-    </div>
-</aside>
-
-
-
-
-  
-    <article id="post-sylaraddress" class="article article-type-post  article-index" itemscope itemprop="blogPost">
-  <div class="article-inner">
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/2026/02/01/sylaraddress/">sylar笔记(五) 封装Address和socket</a>
-    </h1>
-  
-
-        
-        <a href="/2026/02/01/sylaraddress/" class="archive-article-date">
-  	<time datetime="2026-02-01T07:03:08.588Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2026-02-01</time>
-</a>
-        
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <h2 id="封装address"><a href="#封装address" class="headerlink" title="封装address"></a>封装address</h2><p>提供网络地址相关的类，支持与网络地址相关的操作，一共有以下几个类：</p>
-<p><code>Address</code>：所有网络地址的基类，抽象类，对应sockaddr类型，但只包含抽象方法，不包含具体的成员。除此外，Address作为地址类还提供了网络地址查询及网卡地址查询功能。</p>
-<p><code>IPAddress</code>：IP地址的基类，抽象类，在Address基础上，增加了IP地址相关的端口以及子网掩码、广播地址、网段地址操作，同样是只包含抽象方法，不包含具体的成员。</p>
-<p><code>IPv4Address</code>：IPv4地址类，实体类，表示一个IPv4地址，对应sockaddr_in类型，包含一个sockaddr_in成员，可以操作该成员的网络地址和端口，以及获取子码掩码等操作。</p>
-<p><code>IPv6Address</code>：IPv6地址类，实体类，与IPv4Address类似，表示一个IPv6地址，对应sockaddr_in6类型，包含一个sockaddr_in6成员。</p>
-<p><code>UnixAddreess</code>：Unix域套接字类，对应sockaddr_un类型，同上。</p>
-<p><code>UnknownAddress</code>：表示一个未知类型的套接字地址，实体类，对应sockaddr类型，这个类型与Address类型的区别是它包含一个sockaddr成员，并且是一个实体类。</p>
-        
-          <a class="article-more-a" href="/2026/02/01/sylaraddress/#more">more >></a>
-        
-      
-
-      
-    </div>
-    <div class="article-info article-info-index">
-      
-      
-      
-
-      
-        <p class="article-more-link">
-          <a class="article-more-a" href="/2026/02/01/sylaraddress/">展开全文 >></a>
-        </p>
-      
-
-      
-      <div class="clearfix"></div>
-    </div>
-  </div>
-</article>
-
-<aside class="wrap-side-operation">
-    <div class="mod-side-operation">
-        
-        <div class="jump-container" id="js-jump-container" style="display:none;">
-            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
-                <i class="icon-font icon-back"></i>
-            </a>
-            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
-                <i class="icon-font icon-plane jump-plane"></i>
-            </div>
-        </div>
-        
-        
-    </div>
-</aside>
-
-
-
-
-  
-    <article id="post-sylartimer" class="article article-type-post  article-index" itemscope itemprop="blogPost">
-  <div class="article-inner">
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/2026/02/01/sylartimer/">sylar笔记(三) 定时器和IO协程调度</a>
-    </h1>
-  
-
-        
-        <a href="/2026/02/01/sylartimer/" class="archive-article-date">
-  	<time datetime="2026-01-31T17:55:27.744Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2026-02-01</time>
-</a>
-        
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <p>我们完成了协程调度。可以将任务加入调度器，并且以协程为最小单位去进行。通过IO模块，我们可以将IO事件注册到调度器中，并且通过协程去处理IO事件。但是有时我们希望某些任务在指定时间后执行，或者每隔一段时间执行一次。这个时候就需要定时器模块。定时器和IO一样，都是通过Scheduler调度协程去执行的。</p>
-        
-          <a class="article-more-a" href="/2026/02/01/sylartimer/#more">more >></a>
-        
-      
-
-      
-    </div>
-    <div class="article-info article-info-index">
-      
-      
-      
-
-      
-        <p class="article-more-link">
-          <a class="article-more-a" href="/2026/02/01/sylartimer/">展开全文 >></a>
-        </p>
-      
-
-      
-      <div class="clearfix"></div>
-    </div>
-  </div>
-</article>
-
-<aside class="wrap-side-operation">
-    <div class="mod-side-operation">
-        
-        <div class="jump-container" id="js-jump-container" style="display:none;">
-            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
-                <i class="icon-font icon-back"></i>
-            </a>
-            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
-                <i class="icon-font icon-plane jump-plane"></i>
-            </div>
-        </div>
-        
-        
-    </div>
-</aside>
-
-
-
-
-  
-    <article id="post-sylariom" class="article article-type-post  article-index" itemscope itemprop="blogPost">
-  <div class="article-inner">
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/2026/01/30/sylariom/">sylar笔记(二) IOmanager继承Scheduler实现IO协程调度</a>
-    </h1>
-  
-
-        
-        <a href="/2026/01/30/sylariom/" class="archive-article-date">
-  	<time datetime="2026-01-30T09:36:23.458Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2026-01-30</time>
-</a>
-        
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <p>对于用epoll的IO多路复用模型，创建一个fiber来去处理到达的IO事件是非常合适的。因为IO事件本质上是等待某个条件满足，然后继续执行后续操作。这个后续操作可以通过Scheduler来实现。<strong>因此IOmanager继承Scheduler并且通过协程来处理epoll注册的事件</strong>。同时也探讨了如何防止惊群效应的问题。</p>
-        
-          <a class="article-more-a" href="/2026/01/30/sylariom/#more">more >></a>
-        
-      
-
-      
-    </div>
-    <div class="article-info article-info-index">
-      
-      
-      
-
-      
-        <p class="article-more-link">
-          <a class="article-more-a" href="/2026/01/30/sylariom/">展开全文 >></a>
-        </p>
-      
-
-      
-      <div class="clearfix"></div>
-    </div>
-  </div>
-</article>
-
-<aside class="wrap-side-operation">
-    <div class="mod-side-operation">
-        
-        <div class="jump-container" id="js-jump-container" style="display:none;">
-            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
-                <i class="icon-font icon-back"></i>
-            </a>
-            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
-                <i class="icon-font icon-plane jump-plane"></i>
-            </div>
-        </div>
-        
-        
-    </div>
-</aside>
-
-
-
-
-  
-    <article id="post-sylar协程调度" class="article article-type-post  article-index" itemscope itemprop="blogPost">
-  <div class="article-inner">
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/2026/01/30/sylar%E5%8D%8F%E7%A8%8B%E8%B0%83%E5%BA%A6/">sylar笔记(一) 协程调度</a>
-    </h1>
-  
-
-        
-        <a href="/2026/01/30/sylar%E5%8D%8F%E7%A8%8B%E8%B0%83%E5%BA%A6/" class="archive-article-date">
-  	<time datetime="2026-01-30T06:06:36.306Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2026-01-30</time>
-</a>
-        
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <p>封装了协程模块之后，实现了用户级线程的切换，其开销甚至小于操作系统线程切换的开销。但是调度算法是比较复杂的，因为涉及到多线程，每个线程又有很多协程，主线程参与不参与调度，等等问题。例如，你无法从线程A的协程切换到线程B的协程。所以协程调度器的设计是非常重要的。当线程A的协程1 swapout时，该切换到哪里？</p>
-        
-          <a class="article-more-a" href="/2026/01/30/sylar%E5%8D%8F%E7%A8%8B%E8%B0%83%E5%BA%A6/#more">more >></a>
-        
-      
-
-      
-    </div>
-    <div class="article-info article-info-index">
-      
-      
-      
-
-      
-        <p class="article-more-link">
-          <a class="article-more-a" href="/2026/01/30/sylar%E5%8D%8F%E7%A8%8B%E8%B0%83%E5%BA%A6/">展开全文 >></a>
-        </p>
-      
-
-      
-      <div class="clearfix"></div>
-    </div>
-  </div>
-</article>
-
-<aside class="wrap-side-operation">
-    <div class="mod-side-operation">
-        
-        <div class="jump-container" id="js-jump-container" style="display:none;">
-            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
-                <i class="icon-font icon-back"></i>
-            </a>
-            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
-                <i class="icon-font icon-plane jump-plane"></i>
-            </div>
-        </div>
-        
-        
-    </div>
-</aside>
-
-
-
-
-  
-    <article id="post-sylarhook阻塞" class="article article-type-post  article-index" itemscope itemprop="blogPost">
-  <div class="article-inner">
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/2026/01/30/sylarhook%E9%98%BB%E5%A1%9E/">sylar笔记(四) hook阻塞函数实现协程级阻塞</a>
-    </h1>
-  
-
-        
-        <a href="/2026/01/30/sylarhook%E9%98%BB%E5%A1%9E/" class="archive-article-date">
-  	<time datetime="2026-01-30T04:41:25.836Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2026-01-30</time>
-</a>
-        
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <p>在socket编程中，阻塞函数会导致整个线程等待操作完成，从而无法处理其他任务。<br>首先，对于单线程的应用程序，例如redis，这么做的话会导致阻塞整个进程，无法完成其他请求。对于多线程的应用程序，例如web服务器，虽然其他线程可以继续工作，但线程的创建和切换开销较大，且线程数目有限，无法充分利用系统资源。<br>为了实现协程级的阻塞，我们可以使用hook技术，将阻塞函数替换为非阻塞版本，并在协程调度器中管理协程的切换。<br>原理就是，当协程调用阻塞函数的时候(read)，通过hook替换为自己实现版本，我们通过<code>read-&gt;切换其他协程并且设置定时器-&gt;切换回来-&gt;read</code>实现协程级阻塞。<br><strong>协程级阻塞对于操作系统来说仍然是非阻塞的，但是对于协程来说是阻塞函数</strong>。所以仍然可以使用epoll等IO多路复用技术来监听多个socket的读写事件，从而实现高并发处理。<br>简单来说，就是通过用非阻塞函数和定时器，在等待的时候切换其他协程来实现。</p>
-        
-          <a class="article-more-a" href="/2026/01/30/sylarhook%E9%98%BB%E5%A1%9E/#more">more >></a>
-        
-      
-
-      
-    </div>
-    <div class="article-info article-info-index">
-      
-      
-      
-
-      
-        <p class="article-more-link">
-          <a class="article-more-a" href="/2026/01/30/sylarhook%E9%98%BB%E5%A1%9E/">展开全文 >></a>
-        </p>
-      
-
-      
-      <div class="clearfix"></div>
-    </div>
-  </div>
-</article>
-
-<aside class="wrap-side-operation">
-    <div class="mod-side-operation">
-        
-        <div class="jump-container" id="js-jump-container" style="display:none;">
-            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
-                <i class="icon-font icon-back"></i>
-            </a>
-            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
-                <i class="icon-font icon-plane jump-plane"></i>
-            </div>
-        </div>
-        
-        
-    </div>
-</aside>
-
-
-
-
-  
-    <article id="post-社会性动物4" class="article article-type-post  article-index" itemscope itemprop="blogPost">
-  <div class="article-inner">
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/2026/01/30/%E7%A4%BE%E4%BC%9A%E6%80%A7%E5%8A%A8%E7%89%A94/">社会性动物读书笔记(四) 大众传播、宣传与说服</a>
-    </h1>
-  
-
-        
-        <a href="/2026/01/30/%E7%A4%BE%E4%BC%9A%E6%80%A7%E5%8A%A8%E7%89%A94/" class="archive-article-date">
-  	<time datetime="2026-01-30T04:29:54.956Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2026-01-30</time>
-</a>
-        
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <p>大众传播：通过各种媒介向人们传递信息。<br>随着电视和互联网的普及，大众传播的影响力越来越大。大众传播如何影响到我们的呢？</p>
-<h2 id="现代媒体的影响"><a href="#现代媒体的影响" class="headerlink" title="现代媒体的影响"></a>现代媒体的影响</h2><p>使用手机可能会导致成瘾，注意力分散，减少谈话乐趣等。比尔·桑顿让学生们把手机放在一旁进行测验，结果发现手机放在看不见的地方的学生表现要远高于看得见的地方。夏令营中没有手机的学生社交智力显著提高。</p>
-<p>技术和媒介不是中立的。《娱乐至死》中，尼尔波兹曼认为是媒介的形式决定了媒介的内容，同时也决定了我们如何思考和理解世界。</p>
-        
-          <a class="article-more-a" href="/2026/01/30/%E7%A4%BE%E4%BC%9A%E6%80%A7%E5%8A%A8%E7%89%A94/#more">more >></a>
-        
-      
-
-      
-    </div>
-    <div class="article-info article-info-index">
-      
-      
-      
-
-      
-        <p class="article-more-link">
-          <a class="article-more-a" href="/2026/01/30/%E7%A4%BE%E4%BC%9A%E6%80%A7%E5%8A%A8%E7%89%A94/">展开全文 >></a>
-        </p>
-      
-
-      
-      <div class="clearfix"></div>
-    </div>
-  </div>
-</article>
-
-<aside class="wrap-side-operation">
-    <div class="mod-side-operation">
-        
-        <div class="jump-container" id="js-jump-container" style="display:none;">
-            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
-                <i class="icon-font icon-back"></i>
-            </a>
-            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
-                <i class="icon-font icon-plane jump-plane"></i>
-            </div>
-        </div>
-        
-        
-    </div>
-</aside>
-
-
-
-
-  
-    <article id="post-社会性动物3" class="article article-type-post  article-index" itemscope itemprop="blogPost">
-  <div class="article-inner">
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/2026/01/30/%E7%A4%BE%E4%BC%9A%E6%80%A7%E5%8A%A8%E7%89%A93/">社会性动物读书笔记(三) 从众</a>
-    </h1>
-  
-
-        
-        <a href="/2026/01/30/%E7%A4%BE%E4%BC%9A%E6%80%A7%E5%8A%A8%E7%89%A93/" class="archive-article-date">
-  	<time datetime="2026-01-30T04:28:01.709Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2026-01-30</time>
-</a>
-        
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <p>从众行为快速传播信息与协调行动（像鸟群一样即时反应），对狩猎-采集社会有明显生存价值。<br>Stanley Schachter 讨论组实验说明，尽管在文化作品人们更喜欢独立自主的英雄形象，但实际上大多数人更喜欢从众的人。</p>
-<p>从众的危险性：会导致人成为群体思维的牺牲品，做出错误决策。从足球比赛的赛后骚乱到阿道夫·希特勒（Adolf Hitler）的狂热追随者齐声呼喊“希特勒万岁”。</p>
-<p>团体思维（Groupthink）<br>定义：有凝聚力的团体中，一致性需求超越现实评估能力。<br>特征：<br>自认为无懈可击。<br>乐观被放大，不满被抑制。<br>成员怀疑自我意见，避免表达异议。</p>
-        
-          <a class="article-more-a" href="/2026/01/30/%E7%A4%BE%E4%BC%9A%E6%80%A7%E5%8A%A8%E7%89%A93/#more">more >></a>
-        
-      
-
-      
-    </div>
-    <div class="article-info article-info-index">
-      
-      
-      
-
-      
-        <p class="article-more-link">
-          <a class="article-more-a" href="/2026/01/30/%E7%A4%BE%E4%BC%9A%E6%80%A7%E5%8A%A8%E7%89%A93/">展开全文 >></a>
-        </p>
-      
-
-      
-      <div class="clearfix"></div>
-    </div>
-  </div>
-</article>
-
-<aside class="wrap-side-operation">
-    <div class="mod-side-operation">
-        
-        <div class="jump-container" id="js-jump-container" style="display:none;">
-            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
-                <i class="icon-font icon-back"></i>
-            </a>
-            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
-                <i class="icon-font icon-plane jump-plane"></i>
-            </div>
-        </div>
-        
-        
-    </div>
-</aside>
-
-
-
-
   
   
-    <nav id="page-nav">
-      <span class="page-number current">1</span><a class="page-number" href="/page/2/">2</a><a class="extend next" rel="next" href="/page/2/">Next &raquo;</a>
-    </nav>
+  
+
+  
+
+  
+
   
 
 
@@ -861,8 +371,8 @@
     <script>
 	var yiliaConfig = {
 		mathjax: false,
-		isHome: true,
-		isPost: false,
+		isHome: false,
+		isPost: true,
 		isArchive: false,
 		isTag: false,
 		isCategory: false,
