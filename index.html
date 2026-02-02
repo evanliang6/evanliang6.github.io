@@ -159,6 +159,136 @@
           <div id="js-content" class="content-ll">
             
   
+    <article id="post-simpleredis3" class="article article-type-post  article-index" itemscope itemprop="blogPost">
+  <div class="article-inner">
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2026/02/02/simpleredis3/">从零实现简易redis(三) command享元工厂解析命令</a>
+    </h1>
+  
+
+        
+        <a href="/2026/02/02/simpleredis3/" class="archive-article-date">
+  	<time datetime="2026-02-02T10:20:10.494Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2026-02-02</time>
+</a>
+        
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>之前我们对于redis的KV存储实现了一个外观模式的封装类<code>RedisHelper</code>，提供了更高层次的接口方便用户使用。但是真实场景用户连接了服务器之后是通过命令行的形式进行交互的。所以我们需要对命令进行解析并且处理。</p>
+        
+          <a class="article-more-a" href="/2026/02/02/simpleredis3/#more">more >></a>
+        
+      
+
+      
+    </div>
+    <div class="article-info article-info-index">
+      
+      
+      
+
+      
+        <p class="article-more-link">
+          <a class="article-more-a" href="/2026/02/02/simpleredis3/">展开全文 >></a>
+        </p>
+      
+
+      
+      <div class="clearfix"></div>
+    </div>
+  </div>
+</article>
+
+<aside class="wrap-side-operation">
+    <div class="mod-side-operation">
+        
+        <div class="jump-container" id="js-jump-container" style="display:none;">
+            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
+                <i class="icon-font icon-back"></i>
+            </a>
+            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
+                <i class="icon-font icon-plane jump-plane"></i>
+            </div>
+        </div>
+        
+        
+    </div>
+</aside>
+
+
+
+
+  
+    <article id="post-simpleredis2" class="article article-type-post  article-index" itemscope itemprop="blogPost">
+  <div class="article-inner">
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2026/02/02/simpleredis2/">从零实现简易redis(二) 外观模式包装skiplist</a>
+    </h1>
+  
+
+        
+        <a href="/2026/02/02/simpleredis2/" class="archive-article-date">
+  	<time datetime="2026-02-02T08:28:06.695Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2026-02-02</time>
+</a>
+        
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>之前实现了skiplist数据结构，用KV键值对的形式存储数据，支持插入，删除，查找等操作。但是还是太底层了。用户需要频繁地接触指针，结构体等操作。所以通过外观模式封装<code>RedisHelper</code>类，提供更高层次的接口，方便用户使用。同时这个<code>RedisHelper</code>类以后也可以选择其他的数据结构实现KV存储但是不需要修改任何的代码。符合面向接口的思想。</p>
+        
+          <a class="article-more-a" href="/2026/02/02/simpleredis2/#more">more >></a>
+        
+      
+
+      
+    </div>
+    <div class="article-info article-info-index">
+      
+      
+      
+
+      
+        <p class="article-more-link">
+          <a class="article-more-a" href="/2026/02/02/simpleredis2/">展开全文 >></a>
+        </p>
+      
+
+      
+      <div class="clearfix"></div>
+    </div>
+  </div>
+</article>
+
+<aside class="wrap-side-operation">
+    <div class="mod-side-operation">
+        
+        <div class="jump-container" id="js-jump-container" style="display:none;">
+            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
+                <i class="icon-font icon-back"></i>
+            </a>
+            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
+                <i class="icon-font icon-plane jump-plane"></i>
+            </div>
+        </div>
+        
+        
+    </div>
+</aside>
+
+
+
+
+  
     <article id="post-sylarhttp" class="article article-type-post  article-index" itemscope itemprop="blogPost">
   <div class="article-inner">
     
@@ -657,140 +787,6 @@
       
         <p class="article-more-link">
           <a class="article-more-a" href="/2026/01/30/sylarhook%E9%98%BB%E5%A1%9E/">展开全文 >></a>
-        </p>
-      
-
-      
-      <div class="clearfix"></div>
-    </div>
-  </div>
-</article>
-
-<aside class="wrap-side-operation">
-    <div class="mod-side-operation">
-        
-        <div class="jump-container" id="js-jump-container" style="display:none;">
-            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
-                <i class="icon-font icon-back"></i>
-            </a>
-            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
-                <i class="icon-font icon-plane jump-plane"></i>
-            </div>
-        </div>
-        
-        
-    </div>
-</aside>
-
-
-
-
-  
-    <article id="post-社会性动物4" class="article article-type-post  article-index" itemscope itemprop="blogPost">
-  <div class="article-inner">
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/2026/01/30/%E7%A4%BE%E4%BC%9A%E6%80%A7%E5%8A%A8%E7%89%A94/">社会性动物读书笔记(四) 大众传播、宣传与说服</a>
-    </h1>
-  
-
-        
-        <a href="/2026/01/30/%E7%A4%BE%E4%BC%9A%E6%80%A7%E5%8A%A8%E7%89%A94/" class="archive-article-date">
-  	<time datetime="2026-01-30T04:29:54.956Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2026-01-30</time>
-</a>
-        
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <p>大众传播：通过各种媒介向人们传递信息。<br>随着电视和互联网的普及，大众传播的影响力越来越大。大众传播如何影响到我们的呢？</p>
-<h2 id="现代媒体的影响"><a href="#现代媒体的影响" class="headerlink" title="现代媒体的影响"></a>现代媒体的影响</h2><p>使用手机可能会导致成瘾，注意力分散，减少谈话乐趣等。比尔·桑顿让学生们把手机放在一旁进行测验，结果发现手机放在看不见的地方的学生表现要远高于看得见的地方。夏令营中没有手机的学生社交智力显著提高。</p>
-<p>技术和媒介不是中立的。《娱乐至死》中，尼尔波兹曼认为是媒介的形式决定了媒介的内容，同时也决定了我们如何思考和理解世界。</p>
-        
-          <a class="article-more-a" href="/2026/01/30/%E7%A4%BE%E4%BC%9A%E6%80%A7%E5%8A%A8%E7%89%A94/#more">more >></a>
-        
-      
-
-      
-    </div>
-    <div class="article-info article-info-index">
-      
-      
-      
-
-      
-        <p class="article-more-link">
-          <a class="article-more-a" href="/2026/01/30/%E7%A4%BE%E4%BC%9A%E6%80%A7%E5%8A%A8%E7%89%A94/">展开全文 >></a>
-        </p>
-      
-
-      
-      <div class="clearfix"></div>
-    </div>
-  </div>
-</article>
-
-<aside class="wrap-side-operation">
-    <div class="mod-side-operation">
-        
-        <div class="jump-container" id="js-jump-container" style="display:none;">
-            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
-                <i class="icon-font icon-back"></i>
-            </a>
-            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
-                <i class="icon-font icon-plane jump-plane"></i>
-            </div>
-        </div>
-        
-        
-    </div>
-</aside>
-
-
-
-
-  
-    <article id="post-社会性动物3" class="article article-type-post  article-index" itemscope itemprop="blogPost">
-  <div class="article-inner">
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/2026/01/30/%E7%A4%BE%E4%BC%9A%E6%80%A7%E5%8A%A8%E7%89%A93/">社会性动物读书笔记(三) 从众</a>
-    </h1>
-  
-
-        
-        <a href="/2026/01/30/%E7%A4%BE%E4%BC%9A%E6%80%A7%E5%8A%A8%E7%89%A93/" class="archive-article-date">
-  	<time datetime="2026-01-30T04:28:01.709Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2026-01-30</time>
-</a>
-        
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <p>从众行为快速传播信息与协调行动（像鸟群一样即时反应），对狩猎-采集社会有明显生存价值。<br>Stanley Schachter 讨论组实验说明，尽管在文化作品人们更喜欢独立自主的英雄形象，但实际上大多数人更喜欢从众的人。</p>
-<p>从众的危险性：会导致人成为群体思维的牺牲品，做出错误决策。从足球比赛的赛后骚乱到阿道夫·希特勒（Adolf Hitler）的狂热追随者齐声呼喊“希特勒万岁”。</p>
-<p>团体思维（Groupthink）<br>定义：有凝聚力的团体中，一致性需求超越现实评估能力。<br>特征：<br>自认为无懈可击。<br>乐观被放大，不满被抑制。<br>成员怀疑自我意见，避免表达异议。</p>
-        
-          <a class="article-more-a" href="/2026/01/30/%E7%A4%BE%E4%BC%9A%E6%80%A7%E5%8A%A8%E7%89%A93/#more">more >></a>
-        
-      
-
-      
-    </div>
-    <div class="article-info article-info-index">
-      
-      
-      
-
-      
-        <p class="article-more-link">
-          <a class="article-more-a" href="/2026/01/30/%E7%A4%BE%E4%BC%9A%E6%80%A7%E5%8A%A8%E7%89%A93/">展开全文 >></a>
         </p>
       
 

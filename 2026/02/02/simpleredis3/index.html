@@ -6,15 +6,17 @@
   <meta name="renderer" content="webkit">
   <meta http-equiv="X-UA-Compatible" content="IE=edge" >
   <link rel="dns-prefetch" href="https://evanliang6.github.io">
-  <title>Archives: 2026 | evan&#39;s blog</title>
+  <title>从零实现简易redis(三) command享元工厂解析命令 | evan&#39;s blog</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <meta name="description" content="blog">
-<meta property="og:type" content="website">
-<meta property="og:title" content="evan&#39;s blog">
-<meta property="og:url" content="https://evanliang6.github.io/archives/2026/page/2/index.html">
+  <meta name="description" content="之前我们对于redis的KV存储实现了一个外观模式的封装类RedisHelper，提供了更高层次的接口方便用户使用。但是真实场景用户连接了服务器之后是通过命令行的形式进行交互的。所以我们需要对命令进行解析并且处理。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="从零实现简易redis(三) command享元工厂解析命令">
+<meta property="og:url" content="https://evanliang6.github.io/2026/02/02/simpleredis3/index.html">
 <meta property="og:site_name" content="evan&#39;s blog">
-<meta property="og:description" content="blog">
+<meta property="og:description" content="之前我们对于redis的KV存储实现了一个外观模式的封装类RedisHelper，提供了更高层次的接口方便用户使用。但是真实场景用户连接了服务器之后是通过命令行的形式进行交互的。所以我们需要对命令进行解析并且处理。">
 <meta property="og:locale">
+<meta property="article:published_time" content="2026-02-02T10:20:10.494Z">
+<meta property="article:modified_time" content="2026-02-02T10:54:18.100Z">
 <meta property="article:author" content="Liang Yifan">
 <meta property="article:tag" content="Liang Yifan">
 <meta name="twitter:card" content="summary">
@@ -157,214 +159,174 @@
             <canvas data-colors="#eaeaea" data-sectionHeight="100" data-contentId="js-content" id="myCanvas1" class="anm-canvas"></canvas>
           </div>
           <div id="js-content" class="content-ll">
-            
-  
-  
+            <article id="post-simpleredis3" class="article article-type-post " itemscope itemprop="blogPost">
+  <div class="article-inner">
     
+      <header class="article-header">
+        
+  
+    <h1 class="article-title" itemprop="name">
+      从零实现简易redis(三) command享元工厂解析命令
+    </h1>
+  
+
+        
+        <a href="/2026/02/02/simpleredis3/" class="archive-article-date">
+  	<time datetime="2026-02-02T10:20:10.494Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2026-02-02</time>
+</a>
+        
+      </header>
     
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>之前我们对于redis的KV存储实现了一个外观模式的封装类<code>RedisHelper</code>，提供了更高层次的接口方便用户使用。但是真实场景用户连接了服务器之后是通过命令行的形式进行交互的。所以我们需要对命令进行解析并且处理。</p>
+<span id="more"></span>
+
+<h2 id="封装commandparser类"><a href="#封装commandparser类" class="headerlink" title="封装commandparser类"></a>封装commandparser类</h2><p>使用工厂模式封装commandparser. 这是一个抽象类，定义了命令解析的接口。每个具体的命令解析器类都继承自这个抽象类，并实现其解析方法。通过这种方式，我们可以轻松地添加新的命令解析器，而不需要修改现有的代码。符合开闭原则。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">CommandParser</span> &#123;</span><br><span class="line"><span class="keyword">protected</span>:</span><br><span class="line">    <span class="type">static</span> std::shared_ptr&lt;RedisHelper&gt; redisHelper;</span><br><span class="line"><span class="keyword">public</span>:</span><br><span class="line">    <span class="function"><span class="type">static</span> <span class="type">void</span> <span class="title">setRedisHelper</span><span class="params">(std::shared_ptr&lt;RedisHelper&gt; helper)</span> </span>&#123; redisHelper = helper; &#125;</span><br><span class="line">    <span class="function"><span class="type">static</span> std::shared_ptr&lt;RedisHelper&gt; <span class="title">getRedisHelper</span><span class="params">()</span> </span>&#123; <span class="keyword">return</span> redisHelper; &#125;</span><br><span class="line">    <span class="function"><span class="keyword">virtual</span> std::string <span class="title">parse</span><span class="params">(std::vector&lt;std::string&gt;&amp; tokens)</span> </span>= <span class="number">0</span>;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>我们用具体的命令解析器类继承自<code>CommandParser</code>类，并实现其解析方法。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// SetexParser </span></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">SetexParser</span> : <span class="keyword">public</span> CommandParser &#123;</span><br><span class="line"><span class="keyword">public</span>:</span><br><span class="line">    <span class="function">std::string <span class="title">parse</span><span class="params">(std::vector&lt;std::string&gt;&amp; tokens)</span> <span class="keyword">override</span></span>;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="comment">// GetParser </span></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">GetParser</span> : <span class="keyword">public</span> CommandParser &#123;</span><br><span class="line"><span class="keyword">public</span>:</span><br><span class="line">    <span class="function">std::string <span class="title">parse</span><span class="params">(std::vector&lt;std::string&gt;&amp; tokens)</span> <span class="keyword">override</span></span>;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<h2 id="为什么使用工厂模式"><a href="#为什么使用工厂模式" class="headerlink" title="为什么使用工厂模式"></a>为什么使用工厂模式</h2><p>如果不使用工厂模式，我们要在<code>parse()</code>函数里使用大量的if-else或者switch-case语句来判断命令类型并调用相应的处理函数。<strong>这种方式不仅代码冗长，而且每次添加新的命令都需要修改这个函数，违反了开闭原则</strong>。</p>
+<p>如果使用工厂模式，每个命令解析器类都负责处理特定的命令类型。我们可以创建一个工厂类，根据命令类型动态地创建相应的命令解析器对象。这样，当我们需要添加新的命令时，只需创建一个新的命令解析器类，而不需要修改现有的代码。</p>
+<h2 id="享元工厂"><a href="#享元工厂" class="headerlink" title="享元工厂"></a>享元工厂</h2><p>首先我们需要一个工厂类来实现根据命令类型创建对应的解析器。<br>这十分简单，只需要根据命令类型返回对应的解析器对象即可。如果想要使用创建的解析器，直接调用<code>parse()</code>函数即可。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">switch</span>(op)&#123;</span><br><span class="line">    <span class="keyword">case</span> SET:&#123;</span><br><span class="line">        parserMaps[command]=std::<span class="built_in">make_shared</span>&lt;SetParser&gt;();</span><br><span class="line">        <span class="keyword">break</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">case</span> SETNX:&#123;</span><br><span class="line">        parserMaps[command]=std::<span class="built_in">make_shared</span>&lt;SetnxParser&gt;();</span><br><span class="line">        <span class="keyword">break</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//... 其他命令解析器   </span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>但是这么做很显然十分的低效。因为每次命令到达，我们都需要新建一个解析器。如果执行完毕又要立刻释放。这会导致非常大的性能开销，因为我们频繁地释放和销毁对象。<br>一种想法是通过池化技术。但是这里我们的parser对象其实是可以共享的，因为它没有成员变量，我们只需要调用其<code>parse()</code>成员函数。所以我们可以使用享元模式来实现这个工厂类。将创建的解析器对象存储在一个map中，当有新的命令到达时，先检查map中是否存在对应的解析器对象，如果存在则直接返回该对象，否则创建一个新的对象并存储在map中。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="function">std::shared_ptr&lt;CommandParser&gt; <span class="title">ParserFlyweightFactory::getParser</span><span class="params">(std::string&amp; command)</span></span>&#123;</span><br><span class="line">    <span class="keyword">if</span>(parserMaps.<span class="built_in">find</span>(command)!=parserMaps.<span class="built_in">end</span>())&#123;</span><br><span class="line">        <span class="keyword">return</span> parserMaps[command];</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="built_in">createCommandParser</span>(command);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+
+
+
+
+      
+
+      
+        <div class="page-reward">
+          <a href="javascript:;" class="page-reward-btn tooltip-top">
+            <div class="tooltip tooltip-east">
+            <span class="tooltip-item">
+              赏
+            </span>
+            <span class="tooltip-content">
+              <span class="tooltip-text">
+                <span class="tooltip-inner">
+                  <p class="reward-p"><i class="icon icon-quo-left"></i>谢谢你请我吃糖果<i class="icon icon-quo-right"></i></p>
+                  <div class="reward-box">
+                    
+                    
+                  </div>
+                </span>
+              </span>
+            </span>
+          </div>
+          </a>
+        </div>
+      
+    </div>
+    <div class="article-info article-info-index">
       
       
-      <section class="archives-wrap">
-        <div class="archive-year-wrap">
-          <a href="/archives/2026" class="archive-year">2026</a>
-        </div>
-        <div class="archives">
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      	<div class="article-meta">
-	      	<a href="/2026/01/30/%E7%A4%BE%E4%BC%9A%E6%80%A7%E5%8A%A8%E7%89%A94/" class="archive-article-date">
-  	<time datetime="2026-01-30T04:29:54.956Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2026-01-30</time>
-</a>
-        </div>
-    	 
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2026/01/30/%E7%A4%BE%E4%BC%9A%E6%80%A7%E5%8A%A8%E7%89%A94/">社会性动物读书笔记(四) 大众传播、宣传与说服</a>
-    </h1>
-  
+      
 
-        <div class="article-info info-on-right">
-          
-          
+      
 
+      
+        
+<div class="share-btn share-icons tooltip-left">
+  <div class="tooltip tooltip-east">
+    <span class="tooltip-item">
+      <a href="javascript:;" class="share-sns share-outer">
+        <i class="icon icon-share"></i>
+      </a>
+    </span>
+    <span class="tooltip-content">
+      <div class="share-wrap">
+        <div class="share-icons">
+          <a class="weibo share-sns" href="javascript:;" data-type="weibo">
+            <i class="icon icon-weibo"></i>
+          </a>
+          <a class="weixin share-sns wxFab" href="javascript:;" data-type="weixin">
+            <i class="icon icon-weixin"></i>
+          </a>
+          <a class="qq share-sns" href="javascript:;" data-type="qq">
+            <i class="icon icon-qq"></i>
+          </a>
+          <a class="douban share-sns" href="javascript:;" data-type="douban">
+            <i class="icon icon-douban"></i>
+          </a>
+          <a class="qzone share-sns" href="javascript:;" data-type="qzone">
+            <i class="icon icon-qzone"></i>
+          </a>
+          <a class="facebook share-sns" href="javascript:;" data-type="facebook">
+            <i class="icon icon-facebook"></i>
+          </a>
+          <a class="twitter share-sns" href="javascript:;" data-type="twitter">
+            <i class="icon icon-twitter"></i>
+          </a>
+          <a class="google share-sns" href="javascript:;" data-type="google">
+            <i class="icon icon-google"></i>
+          </a>
         </div>
-        <div class="clearfix"></div>
-    </header>
+      </div>
+    </span>
+  </div>
+</div>
+
+<div class="page-modal wx-share js-wx-box">
+    <a class="close js-modal-close" href="javascript:;"><i class="icon icon-close"></i></a>
+    <p>扫一扫，分享到微信</p>
+    <div class="wx-qrcode">
+      <img src="//pan.baidu.com/share/qrcode?url=https://evanliang6.github.io/2026/02/02/simpleredis3/" alt="微信分享二维码">
+    </div>
+</div>
+
+<div class="mask js-mask"></div>
+      
+      <div class="clearfix"></div>
+    </div>
   </div>
 </article>
+
   
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      	<div class="article-meta">
-	      	<a href="/2026/01/30/%E7%A4%BE%E4%BC%9A%E6%80%A7%E5%8A%A8%E7%89%A93/" class="archive-article-date">
-  	<time datetime="2026-01-30T04:28:01.709Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2026-01-30</time>
-</a>
+<nav id="article-nav">
+  
+  
+    <a href="/2026/02/02/simpleredis2/" id="article-nav-older" class="article-nav-link-wrap">
+      <div class="article-nav-title">从零实现简易redis(二) 外观模式包装skiplist</div>
+      <i class="icon-circle-right"></i>
+    </a>
+  
+</nav>
+
+
+<aside class="wrap-side-operation">
+    <div class="mod-side-operation">
+        
+        <div class="jump-container" id="js-jump-container" style="display:none;">
+            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
+                <i class="icon-font icon-back"></i>
+            </a>
+            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
+                <i class="icon-font icon-plane jump-plane"></i>
+            </div>
         </div>
-    	 
+        
+        
+    </div>
+</aside>
+
+
+
   
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2026/01/30/%E7%A4%BE%E4%BC%9A%E6%80%A7%E5%8A%A8%E7%89%A93/">社会性动物读书笔记(三) 从众</a>
-    </h1>
+  
   
 
-        <div class="article-info info-on-right">
-          
-          
-
-        </div>
-        <div class="clearfix"></div>
-    </header>
-  </div>
-</article>
-  
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      	<div class="article-meta">
-	      	<a href="/2026/01/30/%E7%A4%BE%E4%BC%9A%E6%80%A7%E5%8A%A8%E7%89%A92/" class="archive-article-date">
-  	<time datetime="2026-01-30T04:20:43.665Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2026-01-30</time>
-</a>
-        </div>
-    	 
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2026/01/30/%E7%A4%BE%E4%BC%9A%E6%80%A7%E5%8A%A8%E7%89%A92/">社会性动物读书笔记(二) 自我辩护</a>
-    </h1>
   
 
-        <div class="article-info info-on-right">
-          
-          
-
-        </div>
-        <div class="clearfix"></div>
-    </header>
-  </div>
-</article>
-  
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      	<div class="article-meta">
-	      	<a href="/2026/01/29/%E7%A4%BE%E4%BC%9A%E6%80%A7%E5%8A%A8%E7%89%A91/" class="archive-article-date">
-  	<time datetime="2026-01-29T07:14:08.739Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2026-01-29</time>
-</a>
-        </div>
-    	 
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2026/01/29/%E7%A4%BE%E4%BC%9A%E6%80%A7%E5%8A%A8%E7%89%A91/">社会性动物读书笔记(一) 社会认知</a>
-    </h1>
   
 
-        <div class="article-info info-on-right">
-          
-          
-
-        </div>
-        <div class="clearfix"></div>
-    </header>
-  </div>
-</article>
-  
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      	<div class="article-meta">
-	      	<a href="/2026/01/28/skiplist/" class="archive-article-date">
-  	<time datetime="2026-01-28T12:48:03.054Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2026-01-28</time>
-</a>
-        </div>
-    	 
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2026/01/28/skiplist/">从零实现简易redis(一) 跳表(skiplist)</a>
-    </h1>
-  
-
-        <div class="article-info info-on-right">
-          
-          
-
-        </div>
-        <div class="clearfix"></div>
-    </header>
-  </div>
-</article>
-  
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      	<div class="article-meta">
-	      	<a href="/2026/01/28/C++11%20%E6%9D%82%E9%A1%B9%E9%9A%8F%E7%AC%94/" class="archive-article-date">
-  	<time datetime="2026-01-28T04:10:42.064Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2026-01-28</time>
-</a>
-        </div>
-    	 
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2026/01/28/C++11%20%E6%9D%82%E9%A1%B9%E9%9A%8F%E7%AC%94/">C++11 杂项随笔</a>
-    </h1>
-  
-
-        <div class="article-info info-on-right">
-          
-          
-
-        </div>
-        <div class="clearfix"></div>
-    </header>
-  </div>
-</article>
-  
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      	<div class="article-meta">
-	      	<a href="/2026/01/16/About-me/" class="archive-article-date">
-  	<time datetime="2026-01-15T17:06:41.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2026-01-16</time>
-</a>
-        </div>
-    	 
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2026/01/16/About-me/">About me</a>
-    </h1>
-  
-
-        <div class="article-info info-on-right">
-          
-          
-
-        </div>
-        <div class="clearfix"></div>
-    </header>
-  </div>
-</article>
-  
-  
-    </div></section>
-  
-
-    
-    <nav id="page-nav">
-      <a class="extend prev" rel="prev" href="/archives/2026/">&laquo; Prev</a><a class="page-number" href="/archives/2026/">1</a><span class="page-number current">2</span>
-    </nav>
   
 
 
@@ -403,8 +365,8 @@
 	var yiliaConfig = {
 		mathjax: false,
 		isHome: false,
-		isPost: false,
-		isArchive: true,
+		isPost: true,
+		isArchive: false,
 		isTag: false,
 		isCategory: false,
 		open_in_new: false,
