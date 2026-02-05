@@ -6,17 +6,20 @@
   <meta name="renderer" content="webkit">
   <meta http-equiv="X-UA-Compatible" content="IE=edge" >
   <link rel="dns-prefetch" href="https://evanliang6.github.io">
-  <title>evan&#39;s blog</title>
+  <title>从零实现简易redis(七) 真实redis学习 | evan&#39;s blog</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <meta name="description" content="blog">
-<meta property="og:type" content="website">
-<meta property="og:title" content="evan&#39;s blog">
-<meta property="og:url" content="https://evanliang6.github.io/page/3/index.html">
+  <meta name="description" content="之前实现了简单的redis, 虽然只有2000-3000行左右的代码，但是实现了跳表和命令行存储，持久化，并且实现了多路复用和基本的网络通信功能。在虚拟机上的压测也不弱于真实的redis。但是真实的redis有更多的机制，比如过期淘汰，更多的value类型。以及探讨redis实际场景的应用。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="从零实现简易redis(七) 真实redis学习">
+<meta property="og:url" content="https://evanliang6.github.io/2026/02/05/simpleredis7/index.html">
 <meta property="og:site_name" content="evan&#39;s blog">
-<meta property="og:description" content="blog">
+<meta property="og:description" content="之前实现了简单的redis, 虽然只有2000-3000行左右的代码，但是实现了跳表和命令行存储，持久化，并且实现了多路复用和基本的网络通信功能。在虚拟机上的压测也不弱于真实的redis。但是真实的redis有更多的机制，比如过期淘汰，更多的value类型。以及探讨redis实际场景的应用。">
 <meta property="og:locale">
+<meta property="article:published_time" content="2026-02-05T07:19:27.369Z">
+<meta property="article:modified_time" content="2026-02-05T12:40:39.543Z">
 <meta property="article:author" content="Liang Yifan">
-<meta property="article:tag" content="Liang Yifan">
+<meta property="article:tag" content="SimpleRedis">
+<meta property="article:tag" content="学习笔记">
 <meta name="twitter:card" content="summary">
   
     <link rel="alternative" href="/atom.xml" title="evan&#39;s blog" type="application/atom+xml">
@@ -163,268 +166,71 @@
             <canvas data-colors="#eaeaea" data-sectionHeight="100" data-contentId="js-content" id="myCanvas1" class="anm-canvas"></canvas>
           </div>
           <div id="js-content" class="content-ll">
-            
-  
-    <article id="post-社会性动物3" class="article article-type-post  article-index" itemscope itemprop="blogPost">
+            <article id="post-simpleredis7" class="article article-type-post " itemscope itemprop="blogPost">
   <div class="article-inner">
     
       <header class="article-header">
         
   
-    <h1 itemprop="name">
-      <a class="article-title" href="/2026/01/30/%E7%A4%BE%E4%BC%9A%E6%80%A7%E5%8A%A8%E7%89%A93/">社会性动物读书笔记(三) 从众</a>
+    <h1 class="article-title" itemprop="name">
+      从零实现简易redis(七) 真实redis学习
     </h1>
   
 
         
-        <a href="/2026/01/30/%E7%A4%BE%E4%BC%9A%E6%80%A7%E5%8A%A8%E7%89%A93/" class="archive-article-date">
-  	<time datetime="2026-01-30T04:28:01.709Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2026-01-30</time>
+        <a href="/2026/02/05/simpleredis7/" class="archive-article-date">
+  	<time datetime="2026-02-05T07:19:27.369Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2026-02-05</time>
 </a>
         
       </header>
     
     <div class="article-entry" itemprop="articleBody">
       
-        <p>从众行为快速传播信息与协调行动（像鸟群一样即时反应），对狩猎-采集社会有明显生存价值。<br>Stanley Schachter 讨论组实验说明，尽管在文化作品人们更喜欢独立自主的英雄形象，但实际上大多数人更喜欢从众的人。</p>
-<p>从众的危险性：会导致人成为群体思维的牺牲品，做出错误决策。从足球比赛的赛后骚乱到阿道夫·希特勒（Adolf Hitler）的狂热追随者齐声呼喊“希特勒万岁”。</p>
-<p>团体思维（Groupthink）<br>定义：有凝聚力的团体中，一致性需求超越现实评估能力。<br>特征：<br>自认为无懈可击。<br>乐观被放大，不满被抑制。<br>成员怀疑自我意见，避免表达异议。</p>
-        
-          <a class="article-more-a" href="/2026/01/30/%E7%A4%BE%E4%BC%9A%E6%80%A7%E5%8A%A8%E7%89%A93/#more">more >></a>
-        
+        <p>之前实现了简单的redis, 虽然只有2000-3000行左右的代码，但是实现了跳表和命令行存储，持久化，并且实现了多路复用和基本的网络通信功能。在虚拟机上的压测也不弱于真实的redis。但是真实的redis有更多的机制，比如过期淘汰，更多的value类型。以及探讨redis实际场景的应用。</p>
+<span id="more"></span>
+
+<h2 id="缓存雪崩穿透"><a href="#缓存雪崩穿透" class="headerlink" title="缓存雪崩穿透"></a>缓存雪崩穿透</h2><h3 id="缓存击穿"><a href="#缓存击穿" class="headerlink" title="缓存击穿"></a>缓存击穿</h3><p>一个特别热门的key，某一时刻失效了，大量请求同时查询这个key，发现缓存没有命中，然后大量请求打到后端数据库，导致数据库压力过大，甚至宕机，这种现象称为缓存雪崩。<br>首先对于热门商品可以设置较长的过期时间。<br>双重检查锁：<strong>在去数据库访问之前获取锁</strong>，防止多个线程进入数据库。<strong>获取锁了之后还需要再检查一遍缓存是否存在</strong>，防止多个线程等待锁的时候，前面的线程已经把数据加载到缓存中了。这样对于数据库的访问变成了串行。</p>
+<h3 id="缓存雪崩"><a href="#缓存雪崩" class="headerlink" title="缓存雪崩"></a>缓存雪崩</h3><p>缓存的所有key集中过期了，导致大量请求打到后端数据库，造成数据库压力过大，甚至宕机，这种现象称为缓存雪崩。<strong>解决方式加入随机失效时间</strong>。</p>
+<h3 id="缓存穿透"><a href="#缓存穿透" class="headerlink" title="缓存穿透"></a>缓存穿透</h3><p>请求的key是个不存在的数据，redis查不到，请求进入数据库。导致数据库压力过大。<br>可以在查redis之前校验参数是否合法。<br>缓存空对象，布隆过滤器(多个hash函数和一个位数组)。 </p>
+<h2 id="记录连续访问天数"><a href="#记录连续访问天数" class="headerlink" title="记录连续访问天数"></a>记录连续访问天数</h2><p>通过bitmap记录。可以把key设置为日期，也可以设置为id。具体根据业务场景确定。例如，如果想统计一天所有用户，日期是key. 如果想统计一个用户的连续登录天数，用户id是key。</p>
+<h2 id="用户排名"><a href="#用户排名" class="headerlink" title="用户排名"></a>用户排名</h2><p>通过zset实现。在redis里，key为topxxx, zset里存储<code>&lt;userid,score&gt;</code>的结构体，并且根据score排序。可以设置不同的key, 例如top50, top100等。<br>为了防止频繁更新，可以先用redis的hash存储<code>&lt;userid,score&gt;</code>，然后定时任务每隔一段时间更新zset。</p>
+<h2 id="秒杀系统"><a href="#秒杀系统" class="headerlink" title="秒杀系统"></a>秒杀系统</h2><p>动态页面放入CDN，减少对源站的请求压力。<br>配置负载均衡，分发到多态服务器。<br>使用消息队列削峰，异步处理订单请求。<br>预热redis，把秒杀商品信息放入redis。<br>lua脚本操作库存的原子性，即判断库存大于0，扣减库存，替换库存。或者redis分布式信号量。<strong>redis分布式锁是通过lua脚本实现的</strong>,所以可以认为是一种方法。<br>token机制防止刷单,防重。服务器生成唯一token并且只有到达秒杀时间才能获取token。用户请求时携带token，服务器验证token的合法性。</p>
+<h2 id="持久化"><a href="#持久化" class="headerlink" title="持久化"></a>持久化</h2><p>RDB是每过一段时间fork一个子进程保存数据快照到磁盘上。性能好，启动快，但是安全性较低，可能会丢失最后一段时间的数据。而且数据量大了性能会下降。</p>
+<p>AOF以文本形式记录每一个写命令，服务器重启时重新执行这些命令恢复数据。安全性高，但是文件较大，启动慢。可以通过定期重写AOF文件来减小文件大小。</p>
+<h2 id="为什么快"><a href="#为什么快" class="headerlink" title="为什么快"></a>为什么快</h2><p>内存，IO多路复用，单线程避免上下文切换，数据结构简单</p>
+<h2 id="过期淘汰"><a href="#过期淘汰" class="headerlink" title="过期淘汰"></a>过期淘汰</h2><p>同时使用惰性删除和定期删除相结合的方式。惰性删除是在访问key时检查是否过期，过期则删除。定期删除是每隔一段时间随机检查一些key，删除过期的key。</p>
+<h2 id="redis和mysql数据一致性"><a href="#redis和mysql数据一致性" class="headerlink" title="redis和mysql数据一致性"></a>redis和mysql数据一致性</h2><p>先更新mysql，再更新redis。可能会出现先更新mysql成功，更新redis失败的情况。<br>如果先删除redis再更新mysql，可能会导致旧请求把旧数据写回redis。<br>延迟双删：先删除redis，再更新mysql，等待一段时间后再删除redis。</p>
+<h2 id="redis集群"><a href="#redis集群" class="headerlink" title="redis集群"></a>redis集群</h2><h3 id="主从"><a href="#主从" class="headerlink" title="主从"></a>主从</h3><p>主节点提供(读)写操作，从节点提供读操作。<br>主从同步：第一次同步是全量同步，通过发送RDB文件的方式。之后是增量同步，通过复制积压缓冲区记录命令，并且发送给从节点。</p>
+<h3 id="哨兵"><a href="#哨兵" class="headerlink" title="哨兵"></a>哨兵</h3><p>在主从的基础上加入一个监控redis状态的进程。如果主节点宕机，监控进程可以选取一个内存大的或者偏移量大的从节点升级为主节点，并且通知其他从节点切换主节点。<br>监控进程也可以形成集群。<br>判断主节点是否宕机通过<strong>主观下线</strong>和<strong>客观下线</strong>。主观下线是监控进程认为主节点宕机，客观下线是<strong>大多数监控进程</strong>认为主节点宕机。</p>
+<h2 id="redis分布式锁实现"><a href="#redis分布式锁实现" class="headerlink" title="redis分布式锁实现"></a>redis分布式锁实现</h2><p>setnx命令保证只有key不存在时才能设置成功。通过lua保证释放锁原子性。看门狗续命令过期时间。<br>创建</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">SET key value NX EX 10</span><br><span class="line">SET lock uuidA NX EX 10 // 创建一个key为lock的锁，value为uuidA，过期时间10秒</span><br></pre></td></tr></table></figure>
+<p>删除</p>
+<figure class="highlight lua"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> redis.call(<span class="string">&quot;get&quot;</span>,KEYS[<span class="number">1</span>]) == ARGV[<span class="number">1</span>] <span class="keyword">then</span>  // 判断锁的拥有者是否是自己</span><br><span class="line">    <span class="keyword">return</span> redis.call(<span class="string">&quot;del&quot;</span>,KEYS[<span class="number">1</span>])  // 删除锁</span><br><span class="line"><span class="keyword">else</span></span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span></span><br><span class="line"><span class="keyword">end</span></span><br></pre></td></tr></table></figure>
+<p>如果多redis实例，可以使用RedLock算法。要获取大多数实例的锁才算成功。</p>
+
       
 
       
-    </div>
-    <div class="article-info article-info-index">
-      
-      
-	<div class="article-tag tagcloud">
-		<i class="icon-price-tags icon"></i>
-		<ul class="article-tag-list">
-			 
-        		<li class="article-tag-list-item">
-        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color5">读书笔记</a>
-        		</li>
-      		
-		</ul>
-	</div>
-
-      
-
-      
-        <p class="article-more-link">
-          <a class="article-more-a" href="/2026/01/30/%E7%A4%BE%E4%BC%9A%E6%80%A7%E5%8A%A8%E7%89%A93/">展开全文 >></a>
-        </p>
-      
-
-      
-      <div class="clearfix"></div>
-    </div>
-  </div>
-</article>
-
-<aside class="wrap-side-operation">
-    <div class="mod-side-operation">
-        
-        <div class="jump-container" id="js-jump-container" style="display:none;">
-            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
-                <i class="icon-font icon-back"></i>
-            </a>
-            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
-                <i class="icon-font icon-plane jump-plane"></i>
-            </div>
+        <div class="page-reward">
+          <a href="javascript:;" class="page-reward-btn tooltip-top">
+            <div class="tooltip tooltip-east">
+            <span class="tooltip-item">
+              赏
+            </span>
+            <span class="tooltip-content">
+              <span class="tooltip-text">
+                <span class="tooltip-inner">
+                  <p class="reward-p"><i class="icon icon-quo-left"></i>谢谢你请我吃糖果<i class="icon icon-quo-right"></i></p>
+                  <div class="reward-box">
+                    
+                    
+                  </div>
+                </span>
+              </span>
+            </span>
+          </div>
+          </a>
         </div>
-        
-        
-    </div>
-</aside>
-
-
-
-
-  
-    <article id="post-社会性动物2" class="article article-type-post  article-index" itemscope itemprop="blogPost">
-  <div class="article-inner">
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/2026/01/30/%E7%A4%BE%E4%BC%9A%E6%80%A7%E5%8A%A8%E7%89%A92/">社会性动物读书笔记(二) 自我辩护</a>
-    </h1>
-  
-
-        
-        <a href="/2026/01/30/%E7%A4%BE%E4%BC%9A%E6%80%A7%E5%8A%A8%E7%89%A92/" class="archive-article-date">
-  	<time datetime="2026-01-30T04:20:43.665Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2026-01-30</time>
-</a>
-        
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <p>自我辩护本质：我们被要求解释自己的行为时，我们试图构建出一个有意义的故事，同时满足我们的愿望，让自己和他人看起来都不错。这便是自我辩护的本质。</p>
-<h2 id="认知失调理论"><a href="#认知失调理论" class="headerlink" title="认知失调理论"></a>认知失调理论</h2><p>当一个人持有两种相互矛盾的认知会产生紧张感，这就是认知失调。<br>人会通过改变一种或两种认知，使它们彼此之间更加一致，或者增加更多的认知，帮助弥合原有认知之间的差距。</p>
-<p>例如，吸烟的人为了减少认知失调，会通过一些策略说服自己：<br>改变行为：戒烟<br>改变认知：吸烟没那么危险<br>增加一致认知：吸烟让我快乐<br>淡化不一致：人生本来就有风险</p>
-        
-          <a class="article-more-a" href="/2026/01/30/%E7%A4%BE%E4%BC%9A%E6%80%A7%E5%8A%A8%E7%89%A92/#more">more >></a>
-        
-      
-
-      
-    </div>
-    <div class="article-info article-info-index">
-      
-      
-	<div class="article-tag tagcloud">
-		<i class="icon-price-tags icon"></i>
-		<ul class="article-tag-list">
-			 
-        		<li class="article-tag-list-item">
-        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color5">读书笔记</a>
-        		</li>
-      		
-		</ul>
-	</div>
-
-      
-
-      
-        <p class="article-more-link">
-          <a class="article-more-a" href="/2026/01/30/%E7%A4%BE%E4%BC%9A%E6%80%A7%E5%8A%A8%E7%89%A92/">展开全文 >></a>
-        </p>
-      
-
-      
-      <div class="clearfix"></div>
-    </div>
-  </div>
-</article>
-
-<aside class="wrap-side-operation">
-    <div class="mod-side-operation">
-        
-        <div class="jump-container" id="js-jump-container" style="display:none;">
-            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
-                <i class="icon-font icon-back"></i>
-            </a>
-            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
-                <i class="icon-font icon-plane jump-plane"></i>
-            </div>
-        </div>
-        
-        
-    </div>
-</aside>
-
-
-
-
-  
-    <article id="post-社会性动物1" class="article article-type-post  article-index" itemscope itemprop="blogPost">
-  <div class="article-inner">
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/2026/01/29/%E7%A4%BE%E4%BC%9A%E6%80%A7%E5%8A%A8%E7%89%A91/">社会性动物读书笔记(一) 社会认知</a>
-    </h1>
-  
-
-        
-        <a href="/2026/01/29/%E7%A4%BE%E4%BC%9A%E6%80%A7%E5%8A%A8%E7%89%A91/" class="archive-article-date">
-  	<time datetime="2026-01-29T07:14:08.739Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2026-01-29</time>
-</a>
-        
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <p>在现代人的视角看来，古人的观念是迷信的。然而，各时代人们都嘲笑前人的荒谬，但本身也会陷入迷信。</p>
-<p>社会认知是社会心理学的一个主要领域。这个研究领域关注的是：人们如何相信自己所做的事情；人们如何解释、记忆、预测、作出决定、评价自己和他人；以及为什么这些过程经常会产生错误。</p>
-<p>在很多时候，我们采用理性、事实和批判性分析，<strong>不是为了形成我们的观点，而是为了确证我们已经看到、感觉到或者相信的东西</strong>。正如小说家阿娜伊斯·宁（Anais Nin）所言：“我们看到的并非事物的本来面目；而是我们所看到的事物的本来面目。”。在很大程度上，<strong>我们如何理解世界取决于我们的直觉、我们的个性、我们感知世界的方式，以及一系列基础性的社会动机</strong>。</p>
-        
-          <a class="article-more-a" href="/2026/01/29/%E7%A4%BE%E4%BC%9A%E6%80%A7%E5%8A%A8%E7%89%A91/#more">more >></a>
-        
-      
-
-      
-    </div>
-    <div class="article-info article-info-index">
-      
-      
-	<div class="article-tag tagcloud">
-		<i class="icon-price-tags icon"></i>
-		<ul class="article-tag-list">
-			 
-        		<li class="article-tag-list-item">
-        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color5">读书笔记</a>
-        		</li>
-      		
-		</ul>
-	</div>
-
-      
-
-      
-        <p class="article-more-link">
-          <a class="article-more-a" href="/2026/01/29/%E7%A4%BE%E4%BC%9A%E6%80%A7%E5%8A%A8%E7%89%A91/">展开全文 >></a>
-        </p>
-      
-
-      
-      <div class="clearfix"></div>
-    </div>
-  </div>
-</article>
-
-<aside class="wrap-side-operation">
-    <div class="mod-side-operation">
-        
-        <div class="jump-container" id="js-jump-container" style="display:none;">
-            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
-                <i class="icon-font icon-back"></i>
-            </a>
-            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
-                <i class="icon-font icon-plane jump-plane"></i>
-            </div>
-        </div>
-        
-        
-    </div>
-</aside>
-
-
-
-
-  
-    <article id="post-skiplist" class="article article-type-post  article-index" itemscope itemprop="blogPost">
-  <div class="article-inner">
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/2026/01/28/skiplist/">从零实现简易redis(一) 跳表(skiplist)</a>
-    </h1>
-  
-
-        
-        <a href="/2026/01/28/skiplist/" class="archive-article-date">
-  	<time datetime="2026-01-28T12:48:03.054Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2026-01-28</time>
-</a>
-        
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <h2 id="跳表是什么"><a href="#跳表是什么" class="headerlink" title="跳表是什么"></a>跳表是什么</h2><p>跳表是在传统链表的基础上进行了一些改进的数据结构。传统链表在查询数据时复杂度为O(n), 而跳表通过添加多级索引的方式可以把复杂度降到O(log n)。本质上是用空间换取时间。如图所示。<br>redis内部使用跳表来存储KV数据中的有序集合(sorted set)，跳表的实现相对简单且高效，适合在内存中存储和操作有序数据。</p>
-        
-          <a class="article-more-a" href="/2026/01/28/skiplist/#more">more >></a>
-        
-      
-
       
     </div>
     <div class="article-info article-info-index">
@@ -448,16 +254,75 @@
       
 
       
-        <p class="article-more-link">
-          <a class="article-more-a" href="/2026/01/28/skiplist/">展开全文 >></a>
-        </p>
-      
 
+      
+        
+<div class="share-btn share-icons tooltip-left">
+  <div class="tooltip tooltip-east">
+    <span class="tooltip-item">
+      <a href="javascript:;" class="share-sns share-outer">
+        <i class="icon icon-share"></i>
+      </a>
+    </span>
+    <span class="tooltip-content">
+      <div class="share-wrap">
+        <div class="share-icons">
+          <a class="weibo share-sns" href="javascript:;" data-type="weibo">
+            <i class="icon icon-weibo"></i>
+          </a>
+          <a class="weixin share-sns wxFab" href="javascript:;" data-type="weixin">
+            <i class="icon icon-weixin"></i>
+          </a>
+          <a class="qq share-sns" href="javascript:;" data-type="qq">
+            <i class="icon icon-qq"></i>
+          </a>
+          <a class="douban share-sns" href="javascript:;" data-type="douban">
+            <i class="icon icon-douban"></i>
+          </a>
+          <a class="qzone share-sns" href="javascript:;" data-type="qzone">
+            <i class="icon icon-qzone"></i>
+          </a>
+          <a class="facebook share-sns" href="javascript:;" data-type="facebook">
+            <i class="icon icon-facebook"></i>
+          </a>
+          <a class="twitter share-sns" href="javascript:;" data-type="twitter">
+            <i class="icon icon-twitter"></i>
+          </a>
+          <a class="google share-sns" href="javascript:;" data-type="google">
+            <i class="icon icon-google"></i>
+          </a>
+        </div>
+      </div>
+    </span>
+  </div>
+</div>
+
+<div class="page-modal wx-share js-wx-box">
+    <a class="close js-modal-close" href="javascript:;"><i class="icon icon-close"></i></a>
+    <p>扫一扫，分享到微信</p>
+    <div class="wx-qrcode">
+      <img src="//pan.baidu.com/share/qrcode?url=https://evanliang6.github.io/2026/02/05/simpleredis7/" alt="微信分享二维码">
+    </div>
+</div>
+
+<div class="mask js-mask"></div>
       
       <div class="clearfix"></div>
     </div>
   </div>
 </article>
+
+  
+<nav id="article-nav">
+  
+  
+    <a href="/2026/02/05/simpleredis6/" id="article-nav-older" class="article-nav-link-wrap">
+      <div class="article-nav-title">从零实现简易redis(六) 持久化</div>
+      <i class="icon-circle-right"></i>
+    </a>
+  
+</nav>
+
 
 <aside class="wrap-side-operation">
     <div class="mod-side-operation">
@@ -477,153 +342,14 @@
 
 
 
-
-  
-    <article id="post-C++11 杂项随笔" class="article article-type-post  article-index" itemscope itemprop="blogPost">
-  <div class="article-inner">
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/2026/01/28/C++11%20%E6%9D%82%E9%A1%B9%E9%9A%8F%E7%AC%94/">C++11 杂项随笔</a>
-    </h1>
-  
-
-        
-        <a href="/2026/01/28/C++11%20%E6%9D%82%E9%A1%B9%E9%9A%8F%E7%AC%94/" class="archive-article-date">
-  	<time datetime="2026-01-28T04:10:42.064Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2026-01-28</time>
-</a>
-        
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <h2 id="nullptr"><a href="#nullptr" class="headerlink" title="nullptr"></a>nullptr</h2><p>nullptr和NULL的区别：NULL在C++中是一个宏，被定义为0. 而nullptr是C++11引入的一个关键字，表示空指针。<br>C++对于类型的转换更加严格，指针类型的转换有时不能像C隐式转换，使用nullptr可以避免这些问题。</p>
-        
-          <a class="article-more-a" href="/2026/01/28/C++11%20%E6%9D%82%E9%A1%B9%E9%9A%8F%E7%AC%94/#more">more >></a>
-        
-      
-
-      
-    </div>
-    <div class="article-info article-info-index">
-      
-      
-	<div class="article-tag tagcloud">
-		<i class="icon-price-tags icon"></i>
-		<ul class="article-tag-list">
-			 
-        		<li class="article-tag-list-item">
-        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color5">学习笔记</a>
-        		</li>
-      		
-		</ul>
-	</div>
-
-      
-
-      
-        <p class="article-more-link">
-          <a class="article-more-a" href="/2026/01/28/C++11%20%E6%9D%82%E9%A1%B9%E9%9A%8F%E7%AC%94/">展开全文 >></a>
-        </p>
-      
-
-      
-      <div class="clearfix"></div>
-    </div>
-  </div>
-</article>
-
-<aside class="wrap-side-operation">
-    <div class="mod-side-operation">
-        
-        <div class="jump-container" id="js-jump-container" style="display:none;">
-            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
-                <i class="icon-font icon-back"></i>
-            </a>
-            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
-                <i class="icon-font icon-plane jump-plane"></i>
-            </div>
-        </div>
-        
-        
-    </div>
-</aside>
-
-
-
-
-  
-    <article id="post-About-me" class="article article-type-post  article-index" itemscope itemprop="blogPost">
-  <div class="article-inner">
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/2026/01/16/About-me/">About me</a>
-    </h1>
-  
-
-        
-        <a href="/2026/01/16/About-me/" class="archive-article-date">
-  	<time datetime="2026-01-15T17:06:41.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2026-01-16</time>
-</a>
-        
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <p>hi, 我叫梁轶凡evanliang. 本科毕业于西安交通大学。主要学习C++服务器开发。除此之外，我对于java spring后端，pytorch人工智能，游戏开发，嵌入式开发也有了解。</p>
-<p>我喜欢读书，但是几乎不读小说。我沉迷于社会心理学，自诩业余社会心理学家。我还读了很多关于经济学，政治学，博弈论，日语教科书等书籍。我也喜欢听音乐，喜欢eimy和elma的故事。</p>
-<p>从很小的时候开始，我就对于人为什么会产生这种想法等问题感到好奇。于是，我开始从书中寻找问题的答案。相比于人们根据直觉给出的通俗的解释，我觉得书中几十页纸的论证过程更能让我信服，让我沉迷其中。于是有了写读书笔记的想法。正好在学习计算机的过程中也记下了成堆的笔记，于是就有了建立博客的想法。</p>
-
-      
-
-      
-    </div>
-    <div class="article-info article-info-index">
-      
-      
-      
-
-      
-        <p class="article-more-link">
-          <a class="article-more-a" href="/2026/01/16/About-me/">展开全文 >></a>
-        </p>
-      
-
-      
-      <div class="clearfix"></div>
-    </div>
-  </div>
-</article>
-
-<aside class="wrap-side-operation">
-    <div class="mod-side-operation">
-        
-        <div class="jump-container" id="js-jump-container" style="display:none;">
-            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
-                <i class="icon-font icon-back"></i>
-            </a>
-            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
-                <i class="icon-font icon-plane jump-plane"></i>
-            </div>
-        </div>
-        
-        
-    </div>
-</aside>
-
-
-
-
   
   
-    <nav id="page-nav">
-      <a class="extend prev" rel="prev" href="/page/2/">&laquo; Prev</a><a class="page-number" href="/">1</a><a class="page-number" href="/page/2/">2</a><span class="page-number current">3</span>
-    </nav>
+  
+
+  
+
+  
+
   
 
 
@@ -661,8 +387,8 @@
     <script>
 	var yiliaConfig = {
 		mathjax: false,
-		isHome: true,
-		isPost: false,
+		isHome: false,
+		isPost: true,
 		isArchive: false,
 		isTag: false,
 		isCategory: false,
