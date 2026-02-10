@@ -16,7 +16,7 @@
 <meta property="og:description" content="对于用epoll的IO多路复用模型，创建一个fiber来去处理到达的IO事件是非常合适的。因为IO事件本质上是等待某个条件满足，然后继续执行后续操作。这个后续操作可以通过Scheduler来实现。因此IOmanager继承Scheduler并且通过协程来处理epoll注册的事件。同时也探讨了如何防止惊群效应的问题。">
 <meta property="og:locale">
 <meta property="article:published_time" content="2026-01-30T09:36:23.458Z">
-<meta property="article:modified_time" content="2026-02-02T11:13:13.384Z">
+<meta property="article:modified_time" content="2026-02-10T08:37:37.269Z">
 <meta property="article:author" content="Liang Yifan">
 <meta property="article:tag" content="sylar">
 <meta property="article:tag" content="学习笔记">
@@ -63,9 +63,9 @@
 			
 				<li><a href="/">主页</a></li>
 	        
-				<li><a href="/tags/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/">读书笔记</a></li>
-	        
 				<li><a href="/tags/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/">学习笔记</a></li>
+	        
+				<li><a href="/tags/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/">读书笔记</a></li>
 	        
 				<li><a href="/2026/01/16/About-me/">关于我</a></li>
 	        
@@ -147,9 +147,9 @@
 				
 					<li style="width: 25%"><a href="/">主页</a></li>
 		        
-					<li style="width: 25%"><a href="/tags/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/">读书笔记</a></li>
-		        
 					<li style="width: 25%"><a href="/tags/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/">学习笔记</a></li>
+		        
+					<li style="width: 25%"><a href="/tags/%E8%AF%BB%E4%B9%A6%E7%AC%94%E8%AE%B0/">读书笔记</a></li>
 		        
 					<li style="width: 25%"><a href="/2026/01/16/About-me/">关于我</a></li>
 		        
@@ -212,9 +212,12 @@
 <figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="type">void</span> <span class="title">IOManager::tickle</span><span class="params">()</span></span></span><br><span class="line"><span class="function">    </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (<span class="built_in">hasIdleThreads</span>())</span><br><span class="line">        &#123;</span><br><span class="line">            <span class="keyword">return</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="type">int</span> rt = <span class="built_in">write</span>(m_tickleFds[<span class="number">1</span>], <span class="string">&quot;T&quot;</span>, <span class="number">1</span>); <span class="comment">// 写入一个T字节</span></span><br><span class="line">        <span class="built_in">SYLAR_ASSERT</span>(rt == <span class="number">1</span>);</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
 
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">新事件到达,向管道写数据</span><br><span class="line">   │</span><br><span class="line">   ▼</span><br><span class="line">  管道 --&gt; epoll_wait  ---&gt; idle被唤醒,切换回run ---&gt; 调度器调度新任务</span><br></pre></td></tr></table></figure>
-<h2 id="什么是惊群效应和如何解决"><a href="#什么是惊群效应和如何解决" class="headerlink" title="什么是惊群效应和如何解决"></a>什么是惊群效应和如何解决</h2><p>惊群效应是指多个线程或进程同时等待同一个事件时，当该事件发生时，所有等待的线程或进程都会被唤醒，争夺资源，导致大量的上下文切换和资源浪费。<br>如果我们这里一个Scheduler的任务到来，就tickle所有的线程，那么就会导致惊群效应。如何确保一次只唤醒一个线程？</p>
-<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> (event.data.fd == m_tickleFds[<span class="number">0</span>])</span><br><span class="line">&#123;</span><br><span class="line">    <span class="type">uint8_t</span> dummy; <span class="comment">// 读取掉管道的数据. 但是不处理。</span></span><br><span class="line">    <span class="keyword">while</span> (<span class="built_in">read</span>(m_tickleFds[<span class="number">0</span>], &amp;dummy, <span class="number">1</span>) == <span class="number">1</span>)</span><br><span class="line">    ; <span class="comment">// 边缘触发要用while</span></span><br><span class="line">    <span class="keyword">continue</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>在idle中，通过边缘触发和循环读取管道数据，确保每次只唤醒一个线程处理新任务，从而避免惊群效应的发生。</p>
+
+
+
+
+
+
 
       
 
@@ -485,6 +488,10 @@ return o(i(t),arguments.length<2?void 0:u(arguments[1]))}})},function(t,n,r){var
              
               <li class="article-tag-list-item">
                 <a href="javascript:void(0)" class="js-tag color5">读书笔记</a>
+              </li>
+             
+              <li class="article-tag-list-item">
+                <a href="javascript:void(0)" class="js-tag color1">Epoll</a>
               </li>
             
             <div class="clearfix"></div>
