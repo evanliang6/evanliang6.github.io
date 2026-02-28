@@ -16,7 +16,7 @@
 <meta property="og:description" content="在初学C语言的时候，我们写下了printf(&quot;hello world!&quot;);. 然而这个C程序并不简单。首先，#include&lt;stdio.h&gt;会在预处理时展开，其次，printf会调用write系统调用向fd&#x3D;1的文件描述符写数据，然后OS帮我们完成字符串的搬运和显存的输出。与此同时glibc也会帮我们完成初始化工作然后跳转到main函数，真正的起点是_start">
 <meta property="og:locale">
 <meta property="article:published_time" content="2026-02-28T09:04:49.239Z">
-<meta property="article:modified_time" content="2026-02-28T10:23:51.572Z">
+<meta property="article:modified_time" content="2026-02-28T10:38:16.019Z">
 <meta property="article:author" content="Liang Yifan">
 <meta property="article:tag" content="OS">
 <meta property="article:tag" content="学习笔记">
@@ -204,10 +204,7 @@
 <p>可以打断点查看寄存器地址等, 以及查看内存。</p>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">(gdb) layout asm</span><br><span class="line">(gdb) break *0x7C00</span><br><span class="line">(gdb) continue</span><br></pre></td></tr></table></figure>
 
-
-
-
-
+<h2 id="一点想法"><a href="#一点想法" class="headerlink" title="一点想法"></a>一点想法</h2><p>现代教科书给OS下了非常长的定义，但实际上OS不难理解，从下往上看就是硬件的管理者，管理显存，CPU，内存，磁盘等。从上往下看是一些系统调用和任务管理者。</p>
 
       
 
