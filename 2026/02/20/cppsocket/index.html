@@ -6,20 +6,24 @@
   <meta name="renderer" content="webkit">
   <meta http-equiv="X-UA-Compatible" content="IE=edge" >
   <link rel="dns-prefetch" href="https://evanliang6.github.io">
-  <title>思考快与慢16-20 | evan&#39;s blog</title>
+  <title>C++11 杂项随笔(二)网络 | evan&#39;s blog</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <meta name="description" content="16人更容易接受因果故事而不是抽象统计:">
+  <meta name="description" content="socket,同步异步,多路复用等">
 <meta property="og:type" content="article">
-<meta property="og:title" content="思考快与慢16-20">
-<meta property="og:url" content="https://evanliang6.github.io/2026/02/02/%E6%80%9D%E8%80%83%E5%BF%AB%E4%B8%8E%E6%85%A24/index.html">
+<meta property="og:title" content="C++11 杂项随笔(二)网络">
+<meta property="og:url" content="https://evanliang6.github.io/2026/02/20/cppsocket/index.html">
 <meta property="og:site_name" content="evan&#39;s blog">
-<meta property="og:description" content="16人更容易接受因果故事而不是抽象统计:">
+<meta property="og:description" content="socket,同步异步,多路复用等">
 <meta property="og:locale">
-<meta property="article:published_time" content="2026-02-02T14:13:36.618Z">
-<meta property="article:modified_time" content="2026-02-02T14:19:58.414Z">
+<meta property="og:image" content="https://evanliang6.github.io/image-11.png">
+<meta property="og:image" content="https://evanliang6.github.io/image-13.png">
+<meta property="og:image" content="https://evanliang6.github.io/image-12.png">
+<meta property="article:published_time" content="2026-02-20T02:07:44.548Z">
+<meta property="article:modified_time" content="2026-02-23T04:47:07.678Z">
 <meta property="article:author" content="Liang Yifan">
-<meta property="article:tag" content="读书笔记">
+<meta property="article:tag" content="学习笔记">
 <meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://evanliang6.github.io/image-11.png">
   
     <link rel="alternative" href="/atom.xml" title="evan&#39;s blog" type="application/atom+xml">
   
@@ -165,53 +169,42 @@
             <canvas data-colors="#eaeaea" data-sectionHeight="100" data-contentId="js-content" id="myCanvas1" class="anm-canvas"></canvas>
           </div>
           <div id="js-content" class="content-ll">
-            <article id="post-思考快与慢4" class="article article-type-post " itemscope itemprop="blogPost">
+            <article id="post-cppsocket" class="article article-type-post " itemscope itemprop="blogPost">
   <div class="article-inner">
     
       <header class="article-header">
         
   
     <h1 class="article-title" itemprop="name">
-      思考快与慢16-20
+      C++11 杂项随笔(二)网络
     </h1>
   
 
         
-        <a href="/2026/02/02/%E6%80%9D%E8%80%83%E5%BF%AB%E4%B8%8E%E6%85%A24/" class="archive-article-date">
-  	<time datetime="2026-02-02T14:13:36.618Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2026-02-02</time>
+        <a href="/2026/02/20/cppsocket/" class="archive-article-date">
+  	<time datetime="2026-02-20T02:07:44.548Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2026-02-20</time>
 </a>
         
       </header>
     
     <div class="article-entry" itemprop="articleBody">
       
-        <h2 id="16"><a href="#16" class="headerlink" title="16"></a>16</h2><p>人更容易接受因果故事而不是抽象统计:</p>
-<span id="more"></span>
-
-<p>二、两个出租车实验：统计基率 vs 因果基率<br>版本一：统计基率（抽象数字）<br>城里85%的出租车是绿色的，15%是蓝色的。<br>一位证人说肇事车是蓝色的，证人识别颜色的准确率是80%。<br>数学上，根据贝叶斯定理，肇事车是蓝色的概率约为 41%。<br>人们直觉认为是80%，因为他们忽略了基率，只信证人说法。<br>解释：这里的“85%绿车”是一个统计基率，只是一个背景事实（城市分布），人很难把它纳入具体情境中，因此容易被忽略。<br>版本二：因果基率（有解释的数字）<br>两家车行数量一样多，但绿色出租车的肇事率是85%。<br>证人仍然说肇事车是蓝色的。<br>大多数人不再盲信证人，而会思考：“绿色车的司机是不是开车比较鲁莽？”<br>最终，他们对事件判断更接近贝叶斯解（也是41%）。<br>解释：这次的85%不是背景数据，而是和事件直接相关的因果信息（绿色车更容易肇事）。这类信息更容易影响直觉系统（系统1）。</p>
-<p>一组人被告知：某实验中，只有 27% 的人在他人癫痫发作时立刻去帮忙。<br>看完两个参与实验者的访谈视频（两人看起来都很好），他们被问这两人是否会帮忙。<br>即使知道统计结果是只有27%帮忙，多数人还是相信这两人会立刻帮助。<br>换句话说，人们没有应用已知的统计事实来判断个体行为。<br>结论：人们不愿意从“统计事实”推出个体判断，却乐意从个别案例（如访谈）推出对群体的结论。这表明我们对统计推理的内建抵抗。</p>
-<h2 id="17"><a href="#17" class="headerlink" title="17"></a>17</h2><p>当一个变量的第一次测量是极端的（非常高或非常低），第二次测量通常更接近平均值。<br>这不是因为改变了什么（比如奖励或惩罚），而是因为运气不会持续极端。</p>
-<p> 案例一：以色列空军训练<br>背景：卡尼曼向飞行教官讲述「奖励比惩罚更有效」。<br>教官反驳：<br>当飞行员表现出色我夸奖他，下一次通常变差；<br>当他表现糟我责骂他，下一次通常变好 → 所以惩罚有效，奖励无效。<br>卡尼曼的回应：这并非因果关系，而是统计现象：<br>出色的表现多半包含运气因素，下一次自然往下回归；<br>糟糕的表现也可能是运气差，下一次自然好一些。<br>教官看到了相关性，却误以为是因果关系。</p>
-<h2 id="18"><a href="#18" class="headerlink" title="18"></a>18</h2><p>我们在日常和专业中常常要做预测，但我们的直觉判断往往容易犯系统性错误，尤其是不知道如何正确“回归到平均值”。</p>
-<p>人们听到“茱莉4岁就能流畅阅读”，就会自动把“早熟阅读”视为“学业成功”的充分证据，然后预测她GPA为3.7~3.8，完全忽略了预测中的不确定性和平均回归效应。</p>
-<p>预测不考虑“回归到平均值”会产生系统性偏误<br>回归到平均值（Regression to the Mean）：<br>如果某个表现特别极端（好或坏），下一次通常会更接近平均值。<br>人们在预测时忽略这一点，导致：<br>对好学生、高表现者过于乐观<br>对表现差的人过于悲观</p>
-<p>如何校正直觉预测：四步回归法<br>假设你要预测某人的大学GPA：<br>从基准值出发：比如全国平均GPA是3.2。<br>做直觉判断：你觉得她可能有3.8。<br>估计证据和结果的相关性：比如相关系数 r &#x3D; 0.3。<br>调整预测：预测 &#x3D; 平均 + 直觉偏差 × 0.3<br>  → 即从平均值往你的直觉方向偏移30%的距离。<br>这样做就引入了回归效果，避免偏差过大。</p>
-<p>为什么我们不喜欢使用“回归”<br>系统一喜欢明确、快速的结论。<br>系统二必须强制介入，带来思考负担。<br>人们不习惯抽象的统计概念，甚至即使被告知回归效应，也会误解为因果关系。</p>
-<p>直觉是快速而有用的，但不可信任地用于数量预测。我们天生会忽略预测中的不确定性，过度相信手头的证据，无法正确应用“回归到平均值”的原理。</p>
-<h2 id="19"><a href="#19" class="headerlink" title="19"></a>19</h2><p>概念解释：<br>“<strong>叙述的谬论</strong>”是塔勒布提出的概念，指的是人们倾向于用简单、连贯、情节丰富的故事来解释复杂的现实，即使这些解释是错误的。<br>我们喜欢听“英俊的棒球手表现更好”这样的故事。</p>
-<p>*&#x2F;相似内容&#x2F;*<strong>认知闭合倾向</strong>：当人感到外部威胁存在的时候，在应对不确定的情形时，会陷入对确定性答案的渴望。<br>我们看到谷歌成功，就以为它的创始人每一步都决策正确，忽略了运气的重要性。<br>因果关系误判：<br>我们以为“英俊→表现好”，或“聪明决策→公司成功”，但可能真正的因果是：“长得好看→评分偏高”（月晕效应），或者“好运→决策看起来都对”。</p>
-<p>后见之明偏差（Hindsight Bias）：事后看，一切都“显而易见”<br>后见之明偏差指的是人们在事件发生后，错误地认为自己早就知道它会发生，或低估当时的不可预测性。<br>例子：很多人在2008年金融危机后声称“他们早知道会崩盘”，但其实在事件发生前并没有这个认知。</p>
-<p>卡尼曼的学生费希霍夫做了实验，让人预测尼克松出访中苏的可能事件。事后，这些人夸大了自己原本预测正确事件的几率，错误回忆自己的判断。<br>事件发生→我们修改对世界的认知→忘记自己原来怎么想的→以为“我们早就知道”。这是心智对“惊讶”的自动调节，让我们感到世界是可以理解和预测的。</p>
-<h2 id="20"><a href="#20" class="headerlink" title="20"></a>20</h2><p>什么是“效度的错觉”：人们基于极少、低质量的信息，编造出看似合理的故事，从而对自己预测的准确性产生过度自信，即便这些预测实际上毫无效度（predictive validity，预测效果）可言。</p>
-<p>术语解释：预测效度（predictive validity）<br>指的是一个测验、指标或判断是否真正能预测未来行为或结果的能力。</p>
-<p>以色列军官的故事<br>作者当年是以色列陆军的心理学人员，负责评估军官训练营候选人的领导潜质。<br>使用的是Leaderless Group Challenge（无领导小组挑战）：候选人必须合作越过一堵高墙，不能碰墙或地面。<br>作者与同事观察每个人的行为，主观评估他们是否具有领导力、意志力等。</p>
-<p>观察者快速地给出印象并打分，形成一致结论，比如“他会成为明星军官”。<br>但数月后检验发现：这些预测与候选人在军官训练营的实际表现几乎无相关性，与随机猜测无异。</p>
-<p>因果关系解释：为什么预测失效？<br>因为：<br>WYSIATI（what you see is all there is）：系统一倾向于只凭手头证据做决定。<br>忽视了**“回归均值”**（regression to the mean）：表现极好或极差的人，其后续表现更可能趋向平均。<br>只看到“外显行为”，却忽视了训练营与现实世界中更复杂的影响因素。</p>
-<p>自信≠准确<br>技术的错觉是指：人们误以为自己在某个领域拥有实际的专业判断力，能够稳定击败不确定性，实际却只是运气好。</p>
-<p>欧丁（Odean）的研究<br>数据来源：10,000个散户在7年中的交易记录，16万多笔交易。方法：比较他们卖掉的股票与买入的股票在未来一年的表现。<br>结论：投资者普遍卖掉了表现好的股票，买入了表现差的股票，平均损失为3.2%（即使扣除手续费）。<br>原因：<br>过早卖出盈利股票（锁定收益）<br>死守亏损股票（期待翻盘）<br>受到新闻与情绪影响而冲动交易</p>
-<p>泰特洛克（Tetlock）20年研究：<br>调查284位专家的8万个预测<br>要求预测三种结果的机率（现状、变好、变坏）<br>结果：<br>专家预测准确率低于平均随机水平<br>知识越多，自信越高，预测不一定更准<br>媒体爱请“豪猪型专家”：自信满满、理论一致，但经常错得离谱<br>“狐狸型”专家虽然思维更复杂，表现稍好，但少被媒体偏爱</p>
-<p>核心结论：为何我们顽固地相信这些错觉？<br>主观感受比统计数字更有说服力：人们相信自己看到和处理的信息（易得性、直觉合理性），不信冷冰冰的统计。<br>文化支持：专业身份、自尊、组织制度都强烈鼓励“相信判断是专业的、可靠的”。<br>替代启发（substitution heuristic）：用一个易于回答的问题（我有没有看到这个人领导）代替一个更难回答的问题（他未来能不能领导好军队）。</p>
-<p>预测错误是不可避免的，不是专家不努力，而是世界太复杂。<br>用测验可以，但别期望太高效度；<br>对长期预测保持怀疑，尤其是在金融、政治、历史等领域；<br>意识到自己可能也在犯这些错觉，需要不断地反思和质疑自己的判断来源。</p>
+        <span id="more"></span>
+<h2 id="同步异步"><a href="#同步异步" class="headerlink" title="同步异步"></a>同步异步</h2><p>同步IO是指发起IO请求后等待操作完成才继续执行。异步IO是指发起IO请求后不等待操作完成，继续执行其他任务，操作完成后通过回调函数，信号等方式通知应用。</p>
+<h2 id="socket过程"><a href="#socket过程" class="headerlink" title="socket过程"></a>socket过程</h2><p>服务器socket()创建一个fd, 指定协议族(ipv4)，套接字类型(TCP&#x2F;UDP), 协议(0).<br>服务器将socket bind到一个地址和端口上，监听listen(). listen的backlog是内核维护的一个队列长度，表示在服务器调用accept之前，内核可以同时处理多少个连接请求。超过这个数量的连接请求会被拒绝或者丢弃。<br>服务器调用accept阻塞(也可以非阻塞)等待客户端连接<br>客户端socket()创建fd, connect连接服务器<br>accept()会返回一个新的fd, 服务器用这个fd和客户端进行通信。过程就和文件的读写一样，read&#x2F;write或者recv&#x2F;send等函数。<strong>socket的意义就是让两个不同主机上的进程能够通信。linux中一切皆文件，所以通信的过程就和文件的读写一样</strong>。<br><img src="/image-11.png" alt="alt text"></p>
+<h2 id="select-poll-epoll"><a href="#select-poll-epoll" class="headerlink" title="select, poll, epoll"></a>select, poll, epoll</h2><p>共同点<br>IO多路复用：一个线程同时管理检测多个IO事件是否就绪。<br>同步IO：发起IO请求后等待操作完成才继续执行。</p>
+<p>select: 需要传入readfds, writefds, exceptfds三个文件描述符集合，fd_set是一个1024位的位图。每次调用都需要把文件描述符集合从用户空间复制到内核空间，效率较低。并且需要遍历整个集合来检查哪些文件描述符就绪，效率较低。适合管理少量文件描述符。<br>poll: 传入一个pollfd结构体数组，每个结构体包含一个文件描述符和事件类型。每次调用都需要把结构体数组从用户空间复制到内核空间，效率较低。也需要遍历整个数组来检查哪些文件描述符就绪，效率较低。适合管理少量文件描述符。<br>epoll是创建之后使用epoll_ctl添加fd和事件类型，避免了每次调用都需要复制到内核空间. 内核通过红黑树管理所有fd事件，还有一个链表的就绪事件队列，如果事件发生，从红黑树拷贝到就绪事件队列，所以epoll_wait复杂度是O(1)。epoll在事件到达时是通过回调机制，而不是轮询机制。epoll向fd注册事件，如果事件到达调用回调函数，直接拷贝到就绪事件队列。</p>
+<h2 id="et-lt"><a href="#et-lt" class="headerlink" title="et, lt"></a>et, lt</h2><p>et和lt是epoll事件的两种触发模式。<br>et是边缘触发，lt是水平触发。et模式下，只有当状态发生变化时才会通知应用程序，而lt模式下，只要状态满足条件就会通知应用程序。et模式效率更高，但需要应用程序自己处理状态变化，lt模式效率较低，但更容易使用。</p>
+<h2 id="阻塞，非阻塞"><a href="#阻塞，非阻塞" class="headerlink" title="阻塞，非阻塞"></a>阻塞，非阻塞</h2><p>阻塞和非阻塞是对于fd的读写操作而言的。阻塞IO是指当应用程序调用read&#x2F;write等函数时，如果数据不可用，应用程序会被阻塞，直到数据可用为止。非阻塞IO是指当应用程序调用read&#x2F;write等函数时，如果没有数据也会立即返回，应用程序可以继续执行其他任务，稍后再尝试读取数据。</p>
+<p>阻塞和非阻塞不影响epoll, epoll是某个fd数据到达时通知.</p>
+<h2 id="reactor-proactor"><a href="#reactor-proactor" class="headerlink" title="reactor proactor"></a>reactor proactor</h2><p>reactor和proactor是两个IO事件处理模型。<br>reactor: 当接收到客户端事件后，Reactor 会根据事件类型来调用相应的代码进行处理. 一般底层是 I&#x2F;O 多路复用结合线程池，主要是用于服务器端处理高并发网络 IO 请求。<br>proactor: 用户进程向内核发起异步IO请求，例如read，当数据准备好时，可以通过回调函数等方式去通知用户进程或者处理。<br>linux对于reactor的支持比较好，epoll作为同步IO的多路复用机制，适合实现reactor模型。对于proactor模型，linux提供了AIO接口，但是性能较差。io_uring是linux内核5.1引入的一种新的异步IO接口，性能较好，适合实现proactor模型。</p>
+<h2 id="tcp数据包个数和send调用次数"><a href="#tcp数据包个数和send调用次数" class="headerlink" title="tcp数据包个数和send调用次数"></a>tcp数据包个数和send调用次数</h2><p>tcp协议是基于字节流的，和数据包无关。应用程序调用send函数时，tcp协议会将数据分割成适当大小的数据包进行发送。tcp协议会根据网络状况和接收方的窗口大小来调整数据包的大小和发送速率。因此，tcp数据包的个数和send调用次数没有直接关系。</p>
+<h2 id="服务器time-wait过多"><a href="#服务器time-wait过多" class="headerlink" title="服务器time_wait过多"></a>服务器time_wait过多</h2><p>http1.1引入了长连接机制，在<code>Connection</code>这个key可以设置<code>keep-alive</code>,<code>false</code>两种value.<br>如果是短连接，服务器在处理完请求之后立刻关闭连接，进入time_wait状态，等待2MSL（Maximum Segment Lifetime）时间后才完全关闭连接。(为了防止旧数据包干扰新链接)。<br>除此之外，长连接超时也会导致time_wait过多。需要开发者写好客户端代码，让客户端尽可能主动关闭。</p>
+<h2 id="网络层"><a href="#网络层" class="headerlink" title="网络层"></a>网络层</h2><p>数据链路层的作用：主要解决相邻节点通信的问题，提供可靠的数据传输服务。数据链路层的主要功能包括<br>封装成帧：添加帧头帧尾<br>差错控制：发现错误，可能可以解决错误或者重新传输<br>可靠传输：发现并解决错误，包括丢失，重复，失序<br>流量控制</p>
+<p>网络层的作用：主要解决主机到主机通信的问题。IP协议一般无连接并且不可靠。<br>IP协议:定义了IP数据报，通过路由器进行存储转发。MTU: 数据链路层最大传输单元。IP数据报大小不能超过MTU，否则要分片.<br><img src="/image-13.png" alt="alt text"></p>
+<p>传输层的作用：主要解决端到端通信的问题。<br>UDP无连接，不可靠，面向报文。如果报文大了，UDP拒绝传输。<br>面向报文：每次传输一个完整的报文，不支持拆分或者合并。<br>无连接不可靠：直接发送数据报，不重传，应用层可以自己实现。<br>支持一对多</p>
+<p>TCP有连接，可靠，面向字节流<br><img src="/image-12.png" alt="alt text"><br>有连接：需要进行三次握手建立连接，四次挥手断开连接.<br>可靠：有序列号确认号和重传机制.<br>面向字节流：应用程序发送的数据被看作一个连续的字节流，tcp协议会将数据分割成适当大小的数据包进行发送，接收方会将数据包重新组装成字节流交给应用程序.<br>MSS: TCP最大报文段长度，指的是TCP数据包中数据部分的最大长度。MSS的大小通常由MTU决定，MSS &#x3D; MTU - IP头部长度 - TCP头部长度. </p>
+<p>tcp流量控制：通过滑动窗口实现。TCP报文段里有窗口大小字段，表示接收方的可用缓冲区大小。发送方根据窗口大小调整发送速率，避免发送过多数据导致接收方缓冲区溢出。<br>tcp可靠传输：ack表明下一个期望收到的序列号，如果发送方没有收到ack或者收到重复ack，说明数据包丢失了，需要重传。<br>拥塞控制：当网络拥塞丢包时减少发送速率</p>
 
       
 
@@ -246,7 +239,7 @@
 		<ul class="article-tag-list">
 			 
         		<li class="article-tag-list-item">
-        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color5">读书笔记</a>
+        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color5">学习笔记</a>
         		</li>
       		
 		</ul>
@@ -302,7 +295,7 @@
     <a class="close js-modal-close" href="javascript:;"><i class="icon icon-close"></i></a>
     <p>扫一扫，分享到微信</p>
     <div class="wx-qrcode">
-      <img src="//pan.baidu.com/share/qrcode?url=https://evanliang6.github.io/2026/02/02/%E6%80%9D%E8%80%83%E5%BF%AB%E4%B8%8E%E6%85%A24/" alt="微信分享二维码">
+      <img src="//pan.baidu.com/share/qrcode?url=https://evanliang6.github.io/2026/02/20/cppsocket/" alt="微信分享二维码">
     </div>
 </div>
 
@@ -316,18 +309,18 @@
   
 <nav id="article-nav">
   
-    <a href="/2026/02/02/%E6%80%9D%E8%80%83%E5%BF%AB%E4%B8%8E%E6%85%A25/" id="article-nav-newer" class="article-nav-link-wrap">
+    <a href="/2026/02/28/os1/" id="article-nav-newer" class="article-nav-link-wrap">
       <i class="icon-circle-left"></i>
       <div class="article-nav-title">
         
-          思考快与慢21-25
+          从零实现简易操作系统(一) 真正的hello world!
         
       </div>
     </a>
   
   
-    <a href="/2026/02/02/%E6%80%9D%E8%80%83%E5%BF%AB%E4%B8%8E%E6%85%A23/" id="article-nav-older" class="article-nav-link-wrap">
-      <div class="article-nav-title">思考快与慢11-15</div>
+    <a href="/2026/02/10/Epoll%E5%92%8C%E7%BA%BF%E7%A8%8B%E6%B1%A0/" id="article-nav-older" class="article-nav-link-wrap">
+      <div class="article-nav-title">sylar笔记(八) 单个epoll还是多个epoll</div>
       <i class="icon-circle-right"></i>
     </a>
   

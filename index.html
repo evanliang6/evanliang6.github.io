@@ -165,6 +165,175 @@
           <div id="js-content" class="content-ll">
             
   
+    <article id="post-os1" class="article article-type-post  article-index" itemscope itemprop="blogPost">
+  <div class="article-inner">
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2026/02/28/os1/">从零实现简易操作系统(一) 真正的hello world!</a>
+    </h1>
+  
+
+        
+        <a href="/2026/02/28/os1/" class="archive-article-date">
+  	<time datetime="2026-02-28T09:04:49.239Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2026-02-28</time>
+</a>
+        
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>在初学C语言的时候，我们写下了<code>printf(&quot;hello world!&quot;);</code>. 然而这个C程序并不简单。首先，<code>#include&lt;stdio.h&gt;</code>会在预处理时展开，其次，<code>printf</code>会调用<code>write</code>系统调用向<code>fd=1</code>的文件描述符写数据，然后OS帮我们完成字符串的搬运和显存的输出。与此同时<code>glibc</code>也会帮我们完成初始化工作然后跳转到<code>main</code>函数，真正的起点是<code>_start</code>.</p>
+        
+          <a class="article-more-a" href="/2026/02/28/os1/#more">more >></a>
+        
+      
+
+      
+    </div>
+    <div class="article-info article-info-index">
+      
+      
+	<div class="article-tag tagcloud">
+		<i class="icon-price-tags icon"></i>
+		<ul class="article-tag-list">
+			 
+        		<li class="article-tag-list-item">
+        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color5">学习笔记</a>
+        		</li>
+      		 
+        		<li class="article-tag-list-item">
+        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color3">OS</a>
+        		</li>
+      		
+		</ul>
+	</div>
+
+      
+
+      
+        <p class="article-more-link">
+          <a class="article-more-a" href="/2026/02/28/os1/">展开全文 >></a>
+        </p>
+      
+
+      
+      <div class="clearfix"></div>
+    </div>
+  </div>
+</article>
+
+<aside class="wrap-side-operation">
+    <div class="mod-side-operation">
+        
+        <div class="jump-container" id="js-jump-container" style="display:none;">
+            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
+                <i class="icon-font icon-back"></i>
+            </a>
+            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
+                <i class="icon-font icon-plane jump-plane"></i>
+            </div>
+        </div>
+        
+        
+    </div>
+</aside>
+
+
+
+
+  
+    <article id="post-cppsocket" class="article article-type-post  article-index" itemscope itemprop="blogPost">
+  <div class="article-inner">
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2026/02/20/cppsocket/">C++11 杂项随笔(二)网络</a>
+    </h1>
+  
+
+        
+        <a href="/2026/02/20/cppsocket/" class="archive-article-date">
+  	<time datetime="2026-02-20T02:07:44.548Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2026-02-20</time>
+</a>
+        
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <span id="more"></span>
+<h2 id="同步异步"><a href="#同步异步" class="headerlink" title="同步异步"></a>同步异步</h2><p>同步IO是指发起IO请求后等待操作完成才继续执行。异步IO是指发起IO请求后不等待操作完成，继续执行其他任务，操作完成后通过回调函数，信号等方式通知应用。</p>
+<h2 id="socket过程"><a href="#socket过程" class="headerlink" title="socket过程"></a>socket过程</h2><p>服务器socket()创建一个fd, 指定协议族(ipv4)，套接字类型(TCP&#x2F;UDP), 协议(0).<br>服务器将socket bind到一个地址和端口上，监听listen(). listen的backlog是内核维护的一个队列长度，表示在服务器调用accept之前，内核可以同时处理多少个连接请求。超过这个数量的连接请求会被拒绝或者丢弃。<br>服务器调用accept阻塞(也可以非阻塞)等待客户端连接<br>客户端socket()创建fd, connect连接服务器<br>accept()会返回一个新的fd, 服务器用这个fd和客户端进行通信。过程就和文件的读写一样，read&#x2F;write或者recv&#x2F;send等函数。<strong>socket的意义就是让两个不同主机上的进程能够通信。linux中一切皆文件，所以通信的过程就和文件的读写一样</strong>。<br><img src="/image-11.png" alt="alt text"></p>
+<h2 id="select-poll-epoll"><a href="#select-poll-epoll" class="headerlink" title="select, poll, epoll"></a>select, poll, epoll</h2><p>共同点<br>IO多路复用：一个线程同时管理检测多个IO事件是否就绪。<br>同步IO：发起IO请求后等待操作完成才继续执行。</p>
+<p>select: 需要传入readfds, writefds, exceptfds三个文件描述符集合，fd_set是一个1024位的位图。每次调用都需要把文件描述符集合从用户空间复制到内核空间，效率较低。并且需要遍历整个集合来检查哪些文件描述符就绪，效率较低。适合管理少量文件描述符。<br>poll: 传入一个pollfd结构体数组，每个结构体包含一个文件描述符和事件类型。每次调用都需要把结构体数组从用户空间复制到内核空间，效率较低。也需要遍历整个数组来检查哪些文件描述符就绪，效率较低。适合管理少量文件描述符。<br>epoll是创建之后使用epoll_ctl添加fd和事件类型，避免了每次调用都需要复制到内核空间. 内核通过红黑树管理所有fd事件，还有一个链表的就绪事件队列，如果事件发生，从红黑树拷贝到就绪事件队列，所以epoll_wait复杂度是O(1)。epoll在事件到达时是通过回调机制，而不是轮询机制。epoll向fd注册事件，如果事件到达调用回调函数，直接拷贝到就绪事件队列。</p>
+<h2 id="et-lt"><a href="#et-lt" class="headerlink" title="et, lt"></a>et, lt</h2><p>et和lt是epoll事件的两种触发模式。<br>et是边缘触发，lt是水平触发。et模式下，只有当状态发生变化时才会通知应用程序，而lt模式下，只要状态满足条件就会通知应用程序。et模式效率更高，但需要应用程序自己处理状态变化，lt模式效率较低，但更容易使用。</p>
+<h2 id="阻塞，非阻塞"><a href="#阻塞，非阻塞" class="headerlink" title="阻塞，非阻塞"></a>阻塞，非阻塞</h2><p>阻塞和非阻塞是对于fd的读写操作而言的。阻塞IO是指当应用程序调用read&#x2F;write等函数时，如果数据不可用，应用程序会被阻塞，直到数据可用为止。非阻塞IO是指当应用程序调用read&#x2F;write等函数时，如果没有数据也会立即返回，应用程序可以继续执行其他任务，稍后再尝试读取数据。</p>
+<p>阻塞和非阻塞不影响epoll, epoll是某个fd数据到达时通知.</p>
+<h2 id="reactor-proactor"><a href="#reactor-proactor" class="headerlink" title="reactor proactor"></a>reactor proactor</h2><p>reactor和proactor是两个IO事件处理模型。<br>reactor: 当接收到客户端事件后，Reactor 会根据事件类型来调用相应的代码进行处理. 一般底层是 I&#x2F;O 多路复用结合线程池，主要是用于服务器端处理高并发网络 IO 请求。<br>proactor: 用户进程向内核发起异步IO请求，例如read，当数据准备好时，可以通过回调函数等方式去通知用户进程或者处理。<br>linux对于reactor的支持比较好，epoll作为同步IO的多路复用机制，适合实现reactor模型。对于proactor模型，linux提供了AIO接口，但是性能较差。io_uring是linux内核5.1引入的一种新的异步IO接口，性能较好，适合实现proactor模型。</p>
+<h2 id="tcp数据包个数和send调用次数"><a href="#tcp数据包个数和send调用次数" class="headerlink" title="tcp数据包个数和send调用次数"></a>tcp数据包个数和send调用次数</h2><p>tcp协议是基于字节流的，和数据包无关。应用程序调用send函数时，tcp协议会将数据分割成适当大小的数据包进行发送。tcp协议会根据网络状况和接收方的窗口大小来调整数据包的大小和发送速率。因此，tcp数据包的个数和send调用次数没有直接关系。</p>
+<h2 id="服务器time-wait过多"><a href="#服务器time-wait过多" class="headerlink" title="服务器time_wait过多"></a>服务器time_wait过多</h2><p>http1.1引入了长连接机制，在<code>Connection</code>这个key可以设置<code>keep-alive</code>,<code>false</code>两种value.<br>如果是短连接，服务器在处理完请求之后立刻关闭连接，进入time_wait状态，等待2MSL（Maximum Segment Lifetime）时间后才完全关闭连接。(为了防止旧数据包干扰新链接)。<br>除此之外，长连接超时也会导致time_wait过多。需要开发者写好客户端代码，让客户端尽可能主动关闭。</p>
+<h2 id="网络层"><a href="#网络层" class="headerlink" title="网络层"></a>网络层</h2><p>数据链路层的作用：主要解决相邻节点通信的问题，提供可靠的数据传输服务。数据链路层的主要功能包括<br>封装成帧：添加帧头帧尾<br>差错控制：发现错误，可能可以解决错误或者重新传输<br>可靠传输：发现并解决错误，包括丢失，重复，失序<br>流量控制</p>
+<p>网络层的作用：主要解决主机到主机通信的问题。IP协议一般无连接并且不可靠。<br>IP协议:定义了IP数据报，通过路由器进行存储转发。MTU: 数据链路层最大传输单元。IP数据报大小不能超过MTU，否则要分片.<br><img src="/image-13.png" alt="alt text"></p>
+<p>传输层的作用：主要解决端到端通信的问题。<br>UDP无连接，不可靠，面向报文。如果报文大了，UDP拒绝传输。<br>面向报文：每次传输一个完整的报文，不支持拆分或者合并。<br>无连接不可靠：直接发送数据报，不重传，应用层可以自己实现。<br>支持一对多</p>
+<p>TCP有连接，可靠，面向字节流<br><img src="/image-12.png" alt="alt text"><br>有连接：需要进行三次握手建立连接，四次挥手断开连接.<br>可靠：有序列号确认号和重传机制.<br>面向字节流：应用程序发送的数据被看作一个连续的字节流，tcp协议会将数据分割成适当大小的数据包进行发送，接收方会将数据包重新组装成字节流交给应用程序.<br>MSS: TCP最大报文段长度，指的是TCP数据包中数据部分的最大长度。MSS的大小通常由MTU决定，MSS &#x3D; MTU - IP头部长度 - TCP头部长度. </p>
+<p>tcp流量控制：通过滑动窗口实现。TCP报文段里有窗口大小字段，表示接收方的可用缓冲区大小。发送方根据窗口大小调整发送速率，避免发送过多数据导致接收方缓冲区溢出。<br>tcp可靠传输：ack表明下一个期望收到的序列号，如果发送方没有收到ack或者收到重复ack，说明数据包丢失了，需要重传。<br>拥塞控制：当网络拥塞丢包时减少发送速率</p>
+
+      
+
+      
+    </div>
+    <div class="article-info article-info-index">
+      
+      
+	<div class="article-tag tagcloud">
+		<i class="icon-price-tags icon"></i>
+		<ul class="article-tag-list">
+			 
+        		<li class="article-tag-list-item">
+        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color5">学习笔记</a>
+        		</li>
+      		
+		</ul>
+	</div>
+
+      
+
+      
+        <p class="article-more-link">
+          <a class="article-more-a" href="/2026/02/20/cppsocket/">展开全文 >></a>
+        </p>
+      
+
+      
+      <div class="clearfix"></div>
+    </div>
+  </div>
+</article>
+
+<aside class="wrap-side-operation">
+    <div class="mod-side-operation">
+        
+        <div class="jump-container" id="js-jump-container" style="display:none;">
+            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
+                <i class="icon-font icon-back"></i>
+            </a>
+            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
+                <i class="icon-font icon-plane jump-plane"></i>
+            </div>
+        </div>
+        
+        
+    </div>
+</aside>
+
+
+
+
+  
     <article id="post-Epoll和线程池" class="article article-type-post  article-index" itemscope itemprop="blogPost">
   <div class="article-inner">
     
@@ -798,162 +967,6 @@
 
 
   
-    <article id="post-思考快与慢1" class="article article-type-post  article-index" itemscope itemprop="blogPost">
-  <div class="article-inner">
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/2026/02/02/%E6%80%9D%E8%80%83%E5%BF%AB%E4%B8%8E%E6%85%A21/">思考快与慢1-5</a>
-    </h1>
-  
-
-        
-        <a href="/2026/02/02/%E6%80%9D%E8%80%83%E5%BF%AB%E4%B8%8E%E6%85%A21/" class="archive-article-date">
-  	<time datetime="2026-02-02T14:07:59.854Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2026-02-02</time>
-</a>
-        
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <h2 id="01"><a href="#01" class="headerlink" title="01"></a>01</h2><p>人的思考分为两个系统。<br>系统一是自动化的运作，非常快、不费力气，即使要费力，也很少，它不受自主控制。<br>· 例如回答1+1&#x3D;？<br>系统二则动用到注意力去做费力的心智活动，包括复杂的计算。系统二的运作通常都跟代理人、选择和专注力的主观经验有关。<br>· 需要注意力<br>· 寻找白头发的女人</p>
-        
-          <a class="article-more-a" href="/2026/02/02/%E6%80%9D%E8%80%83%E5%BF%AB%E4%B8%8E%E6%85%A21/#more">more >></a>
-        
-      
-
-      
-    </div>
-    <div class="article-info article-info-index">
-      
-      
-	<div class="article-tag tagcloud">
-		<i class="icon-price-tags icon"></i>
-		<ul class="article-tag-list">
-			 
-        		<li class="article-tag-list-item">
-        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color5">读书笔记</a>
-        		</li>
-      		
-		</ul>
-	</div>
-
-      
-
-      
-        <p class="article-more-link">
-          <a class="article-more-a" href="/2026/02/02/%E6%80%9D%E8%80%83%E5%BF%AB%E4%B8%8E%E6%85%A21/">展开全文 >></a>
-        </p>
-      
-
-      
-      <div class="clearfix"></div>
-    </div>
-  </div>
-</article>
-
-<aside class="wrap-side-operation">
-    <div class="mod-side-operation">
-        
-        <div class="jump-container" id="js-jump-container" style="display:none;">
-            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
-                <i class="icon-font icon-back"></i>
-            </a>
-            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
-                <i class="icon-font icon-plane jump-plane"></i>
-            </div>
-        </div>
-        
-        
-    </div>
-</aside>
-
-
-
-
-  
-    <article id="post-simpleredis4" class="article article-type-post  article-index" itemscope itemprop="blogPost">
-  <div class="article-inner">
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/2026/02/02/simpleredis4/">从零实现简易redis(四) 封装epoll和服务器</a>
-    </h1>
-  
-
-        
-        <a href="/2026/02/02/simpleredis4/" class="archive-article-date">
-  	<time datetime="2026-02-02T13:37:08.030Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2026-02-02</time>
-</a>
-        
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <p>之前我们实现了命令解析器，这个命令解析器根据命令类型获取对应的解析器对象，然后用解析器来解析参数，并且调用RedisHelper来进行KV存储操作。<br>然而redis作为分布式内存数据库，最重要的功能就是网络通信功能。也就是说，我们要让redis能够和客户端进行通信，接收客户端发送的命令，并且返回处理结果。<br>使用的是Reactor模式来实现网络通信。Reactor模式是事件驱动的设计模式，即通过 I&#x2F;O 多路复用 技术监听事件，并将事件分发给相应的处理器进行处理。fd采用边缘触发非阻塞模式，循环读取。这是非常常见的linux高性能网络编程模型。因此代码内容也十分公式化，创建绑定监听非阻塞加入epoll，epoll等待根据fd分发事件。</p>
-        
-          <a class="article-more-a" href="/2026/02/02/simpleredis4/#more">more >></a>
-        
-      
-
-      
-    </div>
-    <div class="article-info article-info-index">
-      
-      
-	<div class="article-tag tagcloud">
-		<i class="icon-price-tags icon"></i>
-		<ul class="article-tag-list">
-			 
-        		<li class="article-tag-list-item">
-        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color5">学习笔记</a>
-        		</li>
-      		 
-        		<li class="article-tag-list-item">
-        			<a href="javascript:void(0)" class="js-tag article-tag-list-link color2">SimpleRedis</a>
-        		</li>
-      		
-		</ul>
-	</div>
-
-      
-
-      
-        <p class="article-more-link">
-          <a class="article-more-a" href="/2026/02/02/simpleredis4/">展开全文 >></a>
-        </p>
-      
-
-      
-      <div class="clearfix"></div>
-    </div>
-  </div>
-</article>
-
-<aside class="wrap-side-operation">
-    <div class="mod-side-operation">
-        
-        <div class="jump-container" id="js-jump-container" style="display:none;">
-            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
-                <i class="icon-font icon-back"></i>
-            </a>
-            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
-                <i class="icon-font icon-plane jump-plane"></i>
-            </div>
-        </div>
-        
-        
-    </div>
-</aside>
-
-
-
-
-  
   
     <nav id="page-nav">
       <span class="page-number current">1</span><a class="page-number" href="/page/2/">2</a><a class="page-number" href="/page/3/">3</a><a class="extend next" rel="next" href="/page/2/">Next &raquo;</a>
@@ -1080,6 +1093,10 @@ return o(i(t),arguments.length<2?void 0:u(arguments[1]))}})},function(t,n,r){var
              
               <li class="article-tag-list-item">
                 <a href="javascript:void(0)" class="js-tag color1">Epoll</a>
+              </li>
+             
+              <li class="article-tag-list-item">
+                <a href="javascript:void(0)" class="js-tag color3">OS</a>
               </li>
             
             <div class="clearfix"></div>
